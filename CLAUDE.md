@@ -59,5 +59,6 @@ Confirmations come from the notes' own lecture references in §0.2 (p. 1), §0.3
   - **`deleted` is `True` only if the strand meets Appendix B's "What counts as confirmed" rule** in `Project_notes.md`: 0 reads, sent alone, to at least two separate requests of at least 1000 reads. Every `True` item must also be in Appendix B, and every Appendix B strand must be `True`.
   - **No duplicates.** If the sequence is already in the list, don't add it again. Update `deleted` only if the new result changes it, and note the change in the Findings log.
   - Take sequences from the experiment's code or saved output, never retyped by hand. Strands from `LocalChannel` don't go in.
+  - **Keep `tested_strands.csv` in step.** It's a copy of the same list (columns `sequence`, `deleted`, `length`). After every change to `tested_strands.ipynb`, regenerate the CSV from it, and check both have the same rows.
 - **`solution.py` is generated** by the `%%writefile solution.py` cell in the notebook. Edit that cell, not the file directly.
 - The write-up must be **one page** and evidence-based, so preserve plots and numbers from experiments.
