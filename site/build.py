@@ -14,6 +14,7 @@ What it makes (all inside site/):
 
 Writing for the site, in Project_notes.md:
   Figure     ![caption](site/figures/<file>.png)   (copy the line from the Lab notebook page)
+  Output     @notebook-output <cell id>   on a line of its own: that cell's saved HTML output
   Sequence   inline code that is only A/C/G/T is coloured automatically. For a ruler, use:
 
       ```dna
@@ -493,6 +494,8 @@ def render_notebook(nb, figs):
                     f'loading="lazy"></a><figcaption><span>{esc(title)}</span>'
                     f'<button class="copy" data-copy="{esc(embed)}" title="Copy a Markdown line that embeds this '
                     f'figure in Project_notes.md">Copy embed</button></figcaption></figure>')
+            elif "text/html" in data:
+                parts.append(f'<div class="out-html">{_text(data["text/html"])}</div>')
             elif "text/plain" in data:
                 parts.append(f'<pre class="out">{esc(_text(data["text/plain"]))}</pre>')
         label = f"In [{count}]" if count else "Not run"
@@ -502,6 +505,31 @@ def render_notebook(nb, figs):
             f'</span><code>{esc(first[:110])}</code></summary>{highlight_code(src)}</details>'
             f'<div class="nb-out">{outputs}</div></section>')
     return "\n".join(out)
+
+
+NB_OUTPUT = re.compile(r"^@notebook-output[ \t]+(\S+)[ \t]*$", flags=re.M)
+
+
+def embed_notebook_outputs(body, nb):
+    """Render a notes section, replacing each "@notebook-output <cell id>" line with that cell's saved HTML output."""
+    by_id = {c.get("id"): c for c in nb["cells"]}
+    chunks = []
+
+    def stash(m):
+        cell = by_id.get(m.group(1))
+        html_parts = [_text(o["data"]["text/html"]) for o in (cell or {}).get("outputs", [])
+                      if "text/html" in o.get("data", {})]
+        if html_parts:
+            chunks.append(f'<div class="out-html embed">{"".join(html_parts)}</div>')
+        else:
+            chunks.append(f'<p class="nb-empty">No saved HTML output in notebook cell <code>{esc(m.group(1))}</code>. '
+                          'Run that cell and save the notebook.</p>')
+        return f"\n\nNBOUTPUT{len(chunks) - 1}X\n\n"
+
+    rendered = render_md(NB_OUTPUT.sub(stash, body))
+    for i, chunk in enumerate(chunks):
+        rendered = re.sub(rf"<p>\s*NBOUTPUT{i}X\s*</p>", lambda _m: chunk, rendered)
+    return rendered
 
 
 def latest_evaluation(nb):
@@ -658,7 +686,7 @@ def build():
 
     # One page per other section of the notes
     for title, href, body in others:
-        rendered = render_md(body)
+        rendered = embed_notebook_outputs(body, nb)
         sub = [(a, plain(l)) for a, l in re.findall(r'<h3 id="([^"]+)">(.*?)</h3>', rendered)]
         content = (f'<header class="hero"><p class="eyebrow">Project notes</p><h1>{esc(title)}</h1></header>'
                    f'<div class="prose">{rendered}</div>')

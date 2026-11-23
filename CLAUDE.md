@@ -61,4 +61,5 @@ Confirmations come from the notes' own lecture references in §0.2 (p. 1), §0.3
   - Take sequences from the experiment's code or saved output, never retyped by hand. Strands from `LocalChannel` don't go in.
   - **Keep `tested_strands.csv` in step.** It's a copy of the same list (columns `sequence`, `deleted`, `length`). After every change to `tested_strands.ipynb`, regenerate the CSV from it, and check both have the same rows.
 - **`solution.py` is generated** by the `%%writefile solution.py` cell in the notebook. Edit that cell, not the file directly.
+- **Record every change to the `solution.py` cell** in `Project_notes.md`, section "Solution walkthrough and history", table "History of changes to `solution.py`": one row per change, next version number, with date, what changed, why, and the `evaluate` scores (write "not run" if missing). Then remind the user to re-run the `solution-walkthrough` cell and save the notebook, so the walkthrough on the site matches. If the design no longer fits the walkthrough's step-by-step trace, update that cell's trace.
 - The write-up must be **one page** and evidence-based, so preserve plots and numbers from experiments.

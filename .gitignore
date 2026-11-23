@@ -1,3 +1,4 @@
 .venv/
 site/*.html
 __pycache__/
+corpus/

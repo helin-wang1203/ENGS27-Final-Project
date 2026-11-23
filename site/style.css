@@ -177,3 +177,9 @@ math[display="block"] { margin: 0.8em 0; overflow-x: auto; }
   .hero h1 { font-size: 1.6rem; }
   .step { padding-left: 42px; }
 }
+
+/* HTML outputs from notebook cells (e.g. the solution walkthrough) */
+.out-html { overflow-x: auto; }
+.out-html table { min-width: 0; font-size: inherit; }
+.out-html code { background: none; padding: 0; }
+.out-html.embed { margin: 0.9em 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; }
