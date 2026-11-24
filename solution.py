@@ -1,10 +1,11 @@
 import collections
 import heapq
+import math
 import random
 
 STRAND = 300        # bases per strand
 BLOCK = 14          # bases per ranked block; a strand is 21 blocks of 14 plus one of 6
-INDEX_BITS = 12     # strand number: data strands 0, 1, 2, ...; the top value marks the parity strand
+INDEX_BITS = 12     # strand number: data strands 0 .. MAX_DATA - 1; parity strands use the top of the range
 LENGTH_BITS = 10    # how many data bits this strand holds (the rest is padding)
 NEXT = {"A": "ACGT", "C": "AGT", "G": "ACT", "T": "ACGT"}   # allowed next base: never CC or GG
 START = "A"         # stands in for the base before a strand's first base (allows all four)
@@ -107,7 +108,6 @@ BLOCK_SIZES = [BLOCK] * (STRAND // BLOCK) + ([STRAND % BLOCK] if STRAND % BLOCK 
 STRAND_BITS = sum(_block_bits(n) for n in BLOCK_SIZES)
 DATA_BITS = STRAND_BITS - INDEX_BITS - LENGTH_BITS
 assert DATA_BITS < 2 ** LENGTH_BITS
-PARITY = 2 ** INDEX_BITS - 1       # index of the parity strand (4095), never used for data
 
 def _unrank(v, prev, n):
     """Number v -> the v-th allowed n-base string after base prev (A < C < G < T order)."""
@@ -166,17 +166,89 @@ def bases_to_bits(seq):
 # strand costs only its own characters. Everything after the index is scrambled with a pattern
 # seeded by the index, so two strands never look alike even if their data is the same
 # (repeated text); otherwise decode's grouping could merge them.
-#
-# One extra PARITY strand, whatever the text's length: its bits after the index are the XOR,
-# column by column, of every data strand's bits after the index (before scrambling). So every
-# column has even parity (Notes §3.3.3 Parity Checks, p. 59). If one strand is deleted, the
-# decoder knows which index is missing, and XOR-ing everything that came back rebuilds it.
 
 def _scramble(bits, i):
     """XOR bits with a fixed pseudo-random pattern chosen by strand index i. Doing it twice
     gives back the original bits, so the same function also unscrambles."""
     key = random.Random(i).getrandbits(len(bits))
     return format(int(bits, 2) ^ key, f"0{len(bits)}b")
+
+# ---- parity strands: a Hamming code across strands -------------------------------------------
+# Picture the strands stacked as rows. Column by column (one bit from each strand), the strands
+# form a codeword of a Hamming code (Notes §3.3.4 Hamming Codes, p. 59): data strand i sits at
+# Hamming position POS[i] (3, 5, 6, 7, 9, ..., the non-powers of two), and parity check j sits at
+# position 2^(j-1) and makes its group, the positions with bit j-1 set, XOR to 0 (even parity,
+# Notes §3.3.3 Parity Checks, p. 59). Check 0 is an overall parity over everything (the extended
+# code of Remark 3.3.5, p. 61). The decoder knows which strands are missing (their indices never
+# show up), so it only has to fill in known gaps: a code of distance t + 1 can always fill t.
+# How much protection, t, is picked by the 95% rule below:
+#   t = 0: no parity             t = 2: Hamming checks 1..r (distance 3)
+#   t = 1: one XOR strand        t = 3: checks 1..r plus overall parity 0 (distance 4)
+P_DELETE = 74 / 2584   # share of random strands the live channel deletes (Hypotheses 1 and 4)
+MAX_DATA = 240         # data strands per text (indices 0 .. 239)
+SLOTS = 16             # parity strand index = PARITY_TOP - (SLOTS * (d - 1) + j), so it tells the
+PARITY_TOP = 2 ** INDEX_BITS - 1   # decoder both the check j and the number of data strands d
+REST_BITS = STRAND_BITS - INDEX_BITS                    # bits after the index
+assert PARITY_TOP - (SLOTS * MAX_DATA - 1) >= MAX_DATA  # parity indices never collide with data
+
+def _parity_index(d, j):
+    return PARITY_TOP - (SLOTS * (d - 1) + j)
+
+def _parity_slot(k):
+    """Undo _parity_index: index k -> (d, j)."""
+    v = PARITY_TOP - k
+    return v // SLOTS + 1, v % SLOTS
+
+def _positions(d):
+    """Hamming positions of the d data strands: 3, 5, 6, 7, 9, ... (powers of two are checks)."""
+    out, x = [], 3
+    while len(out) < d:
+        if x & (x - 1):
+            out.append(x)
+        x += 1
+    return out
+
+def _info(e):
+    """The score's information term for error rate e, as in the notebook's evaluate: 1 - H(e),
+    and 0 once e >= 0.5 (H(e) is the binary entropy, Notes §3.1.3, p. 46)."""
+    if e <= 0:
+        return 1.0
+    if e >= 0.5:
+        return 0.0
+    return 1 + e * math.log2(e) + (1 - e) * math.log2(1 - e)
+
+def _expected_info(d, n, t):
+    """E[1 - H(e)] for d data strands sent as n strands that rebuild any t deleted ones.
+    The number deleted, k, is Binomial(n, P_DELETE) (Notes §2.4.1, Proposition 2.4.3, p. 33).
+    k <= t: nothing is lost. k > t: assume nothing is rebuilt; the j data strands among the k
+    (hypergeometric) are lost and e = j / d, as if every data strand held the same text."""
+    total = 0.0
+    for k in range(n + 1):
+        pk = math.comb(n, k) * P_DELETE ** k * (1 - P_DELETE) ** (n - k)
+        if k <= t:
+            total += pk
+            continue
+        for j in range(max(0, k - (n - d)), min(k, d) + 1):
+            pj = math.comb(d, j) * math.comb(n - d, k - j) / math.comb(n, k)
+            total += pk * pj * _info(j / d)
+    return total
+
+def _layout(d):
+    """(t, checks) for d data strands: the protection t with the highest expected score.
+    The score is density x (1 - H(e)); the text is fixed, so density is proportional to 1 / n
+    and the best t maximises E[1 - H(e)] / n. Ties go to the smaller t. checks lists the parity
+    strands: t = 0 none; 1 one XOR strand; 2 Hamming checks 1..r; 3 those plus an overall parity."""
+    r = 2
+    while 2 ** r - r - 1 < d:                            # Hamming checks needed for d data strands
+        r += 1
+    options = [(0, []), (1, [0]), (2, list(range(1, r + 1))), (3, [0] + list(range(1, r + 1)))]
+    return max(options, key=lambda o: (_expected_info(d, d + len(o[1]), o[0]) / (d + len(o[1])), -o[0]))
+
+def _check(d, checks, j):
+    """The strands in parity check j, which XOR to 0. ("d", i) is data strand i, ("p", j) parity j."""
+    if j == 0:                                            # overall parity: every other strand
+        return [("p", 0)] + [("d", i) for i in range(d)] + [("p", h) for h in checks if h]
+    return [("p", j)] + [("d", i) for i, x in enumerate(_positions(d)) if x >> (j - 1) & 1]
 
 def encode(text):
     chunks, cur = [], ""
@@ -187,36 +259,74 @@ def encode(text):
             cur = ""
         cur += code
     chunks.append(cur)
-    if len(chunks) > PARITY:
-        raise ValueError("text too long for INDEX_BITS")
-    strands, parity = [], 0
+    d = len(chunks)
+    if d > MAX_DATA:
+        raise ValueError(f"text too long: {d} data strands, at most {MAX_DATA}")
+    strands, value = [], {}
     for i, data in enumerate(chunks):
-        rest = (format(len(data), f"0{LENGTH_BITS}b") + data).ljust(STRAND_BITS - INDEX_BITS, "0")
-        parity ^= int(rest, 2)                            # running XOR of every data strand
+        rest = (format(len(data), f"0{LENGTH_BITS}b") + data).ljust(REST_BITS, "0")
+        value[("d", i)] = int(rest, 2)
         strands.append(bits_to_bases(format(i, f"0{INDEX_BITS}b") + _scramble(rest, i)))
-    rest = format(parity, f"0{STRAND_BITS - INDEX_BITS}b")
-    strands.append(bits_to_bases(format(PARITY, f"0{INDEX_BITS}b") + _scramble(rest, PARITY)))
+    t, checks = _layout(d)
+    for j in sorted(checks, key=lambda j: j == 0):        # Hamming checks first, overall parity last
+        v = 0
+        for var in _check(d, checks, j):                  # every check XORs to 0, so the parity
+            if var != ("p", j):                           # strand is the XOR of the rest
+                v ^= value[var]
+        value[("p", j)] = v
+        k = _parity_index(d, j)
+        strands.append(bits_to_bases(format(k, f"0{INDEX_BITS}b") + _scramble(format(v, f"0{REST_BITS}b"), k)))
     return strands
 
 def _rebuild(best):
-    """If exactly one data strand is missing and the parity strand came back, put the missing
-    strand back into best (index -> (copies, unscrambled bits)). XOR of the parity strand and
-    every data strand that came back equals the missing strand; all zeros means none is missing.
-    The missing index is the one gap in 0, 1, 2, ...; with no gap, it's the one after the last."""
-    if PARITY not in best:
-        return
-    x = int(best.pop(PARITY)[1], 2)
-    for _, rest in best.values():
-        x ^= int(rest, 2)
-    if x == 0:
-        return                                            # nothing missing
-    top = max(best, default=-1)
-    gaps = [i for i in range(top + 1) if i not in best]
-    if len(gaps) > 1:
-        return                                            # two or more lost: parity can't help
-    rest = format(x, f"0{STRAND_BITS - INDEX_BITS}b")
-    if int(rest[:LENGTH_BITS], 2) <= DATA_BITS:           # a sane count, so trust the rebuild
-        best[gaps[0] if gaps else top + 1] = (0, rest)
+    """Fill in deleted strands from the parity strands. best: index -> (copies, unscrambled bits
+    after the index); parity entries are removed, and every data strand the checks pin down is
+    added. Each check says "these strands XOR to 0", one equation per check; the strands that
+    didn't come back are the unknowns, solved by elimination over XOR. With up to t unknowns the
+    solution is unique (the code's distance is t + 1), and with more, whatever is still pinned
+    down is filled in anyway."""
+    par = [k for k in best if k >= MAX_DATA]
+    if not par:
+        return                                            # no parity came back: nothing to use
+    seen = {k: _parity_slot(k) for k in par}
+    d = collections.Counter(dd for dd, _ in seen.values()).most_common(1)[0][0]
+    t, checks = _layout(d)
+    known = {("d", i): int(best[i][1], 2) for i in best if i < d}
+    for k, (dd, j) in seen.items():
+        if dd == d and j in checks:
+            known[("p", j)] = int(best[k][1], 2)
+    for k in par:
+        del best[k]
+    eqs = [_check(d, checks, j) for j in checks]
+    unknown = sorted({v for eq in eqs for v in eq if v not in known})
+    col = {v: n for n, v in enumerate(unknown)}
+    rows = []                                             # [mask of unknowns, XOR of the knowns]
+    for eq in eqs:
+        mask = rhs = 0
+        for v in eq:
+            if v in known:
+                rhs ^= known[v]
+            else:
+                mask |= 1 << col[v]
+        if mask:
+            rows.append([mask, rhs])
+    r = 0                                                 # Gauss-Jordan elimination over XOR
+    for c in range(len(unknown)):
+        piv = next((n for n in range(r, len(rows)) if rows[n][0] >> c & 1), None)
+        if piv is None:
+            continue
+        rows[r], rows[piv] = rows[piv], rows[r]
+        for n in range(len(rows)):
+            if n != r and rows[n][0] >> c & 1:
+                rows[n][0] ^= rows[r][0]
+                rows[n][1] ^= rows[r][1]
+        r += 1
+    for mask, rhs in rows[:r]:
+        if mask & (mask - 1) == 0:                        # one unknown left in the row: it's solved
+            v = unknown[mask.bit_length() - 1]
+            rest = format(rhs, f"0{REST_BITS}b")
+            if v[0] == "d" and int(rest[:LENGTH_BITS], 2) <= DATA_BITS:   # a sane count
+                best[v[1]] = (0, rest)
 
 def _within(a, b, limit):
     """True if a and b differ in at most `limit` positions (Hamming distance, Notes §3.3.2, p. 58)."""
@@ -258,7 +368,7 @@ def decode(reads):
         i = int(bits[:INDEX_BITS], 2)
         if i not in best or len(g) > best[i][0]:          # two groups claim one index: keep the bigger
             best[i] = (len(g), _scramble(bits[INDEX_BITS:], i))
-    _rebuild(best)                                        # one lost strand: rebuild it from parity
+    _rebuild(best)                                        # deleted strands: rebuild from parity
     out = []
     for i in sorted(best):                                # a strand that never came back is skipped
         rest = best[i][1]                                 # unscrambled: [count][data][padding]

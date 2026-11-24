@@ -715,7 +715,9 @@ Built from the notebook's seeds and saved outputs, and checked against Appendix 
 | The 113 strands the baseline (`example_solution.py`) makes for `SAMPLE` ("Baseline strands, 2 of 113 are deleted"), added 2026-11-23 | 113 | 22 | 2 |
 | The 4 strands `solution.py` v6 makes for `SAMPLE`: 300 bases, no CC or GG, scrambled ("v6 decodes the sample perfectly on the live channel, score 2.9733"), added 2026-11-23 | 4 | 300 | 0 |
 | The 26 strands `solution.py` v6 makes for the four new test passages `short 1`, `short 2`, `long 1` and `long 2`: 300 bases, no CC or GG, scrambled ("Five passages on the live channel, four perfect, the longest loses two of 16 strands"), added 2026-11-23. `long 2`'s 16 were then sent alone ("long 2 solo test, strands 10 and 13 are deleted"): 14 returned 1000 of 1000 reads twice, strands 10 and 13 returned 0 twice. The other 10 strands (`short 1`, `short 2`, `long 1`) have only been in mixed runs, but every passage they carry came back whole | 26 | 300 | 2 |
-| **Total** | **4121** | 22–1000 | **123** |
+| The 8 parity strands `solution.py` v8 adds for `short 2` (1), `SAMPLE` (1), `long 1` (1) and `long 2` (5): 300 bases, no CC or GG, scrambled ("v8 recovers long 2 on the live channel, but its mean score falls from 2.2704 to 2.1013"), added 2026-11-23. Only sent mixed with their passage's data strands; every passage came back whole | 8 | 300 | 0 |
+| The XOR parity strand `solution.py` v9 adds for `long 2` ("v9 scores exactly as predicted live, mean 2.2534, with long 2 losing its two deleted strands again"), added 2026-11-23. Only sent mixed with `long 2`'s data strands | 1 | 300 | 0 |
+| **Total** | **4130** | 22–1000 | **123** |
 
 - The 30 strands in "Survivor repeat test, 30 surviving strands return reads in 450 of 450 requests" are starter strands, so they are already counted once.
 - **Pending (resolved 2026-11-14):** the length test's 14 strands that returned 0 reads were held out until confirmed. The retest gave 0 reads again for all 14, so they are now in the bank as `True` and in Appendix B as rows 18–31.
@@ -773,6 +775,7 @@ Claims about the channel that experiments are testing. Each one is numbered, and
   - **Supports:** [Step 34: C-run test](index.html#step-34). 17 of 500 new strands returned 0 reads to one request of 200 and two of 1000, 51 of 51 requests empty. The other 483 returned all 200 of 200 reads. Kept apart from the 74 of 2584 for the same reason as the G-run test's strands.
   - **Supports:** [Step 37: Baseline strands](index.html#step-37). 2 of 113 baseline strands (22 bases) are deleted: 0 reads to two solo requests of 1000 each, after only 1 and 8 chance reads in a batch of 5000. Kept apart from the 74 of 2584 because the baseline's strands aren't independently random (they share index prefixes).
   - **Supports:** [Step 40: long 2 solo test](index.html#step-40). The live `evaluate` run on `long 2` lost exactly the text of 2 strands; sent alone, strands 10 and 13 returned 0 reads to two requests of 1000 each, 4 of 4 empty, and the other 14 returned 1000 of 1000 reads in all 28 requests. Kept apart from the 74 of 2584 because the strands carry encoded text, not random bases.
+  - **Supports:** [Step 43: v9 live run](index.html#step-43). `long 2`'s same 16 data strands, sent a second time in a full `evaluate` run (now with a parity strand), again came back with accuracy 0.8826, exactly the text of strands 10 and 13 lost. The other four passages, all v6's strands, again came back whole.
 - **Caveats:**
   1. **Few repeats.** Most lost strands were tested only twice. Two matching runs of 400 strands make the claim very likely, not proven.
      - **Update (2026-11-14):** resolved for lost strands. The repeat test gives each at least 32 empty requests in a row. Still open for survivors, which haven't been repeated beyond the tail test's two runs.
@@ -913,7 +916,7 @@ This section shows how the current `solution.py` turns an example English string
 - **Where it comes from:** the notebook cell `solution-walkthrough`, just after the `%%writefile solution.py` cell. The walkthrough below is that cell's saved output.
 - **Keeping it current:** after every change to the `solution.py` cell, re-run the `solution.py` cell, then the walkthrough cell, and save the notebook.
 - **Channel:** `ModelChannel`, an offline model of the live channel defined in the cell: breaks by Hypothesis 5 (0.42 after CC or GG, 0.0104 elsewhere), one piece per broken copy, nothing under 8 bases, and 0.5% substitutions per base (Step 36). It sends nothing to the live server and adds nothing to the bank of tested strands (Appendix C). `LocalChannel` isn't used because it almost never returns a whole 300-base strand.
-- **When the design changes:** the step-by-step trace follows the v7 design (updated 2026-11-23; it traced v6 and, before that, the baseline). Its `DELETED` setting removes whole strands before the channel, to show the parity rebuild; the saved output deletes strand 0 of a 3-data-strand example. If `solution.py` stops matching it, the cell says so and shows only the strands and the decoded text. The trace will then need updating for the new design.
+- **When the design changes:** the step-by-step trace follows the v9 design (updated 2026-11-23; it traced v8, v7, v6 and, before that, the baseline). Its example is the `long 2` passage, and its `DELETED` setting removes whole strands before the channel. The saved output deletes strands 10 and 13, the two the live channel really deletes (Step 40). v9 gives `long 2` one parity strand, which can't rebuild two, so the trace ends without an exact recovery; `DELETED = {13}` shows a rebuild. If `solution.py` stops matching it, the cell says so and shows only the strands and the decoded text. The trace will then need updating for the new design.
 - **Saved versions:** `example_solution.py` is the baseline (v0). `solution1.py` is a copy of v6, the first version that worked on the live channel (score 2.9733), kept as a record while `solution.py` keeps changing.
 
 ### Walkthrough
@@ -922,19 +925,20 @@ This section shows how the current `solution.py` turns an example English string
 
 ### What each step rests on
 
-| Step (v7) | Source |
+| Step (v9) | Source |
 |---|---|
 | Characters → Huffman codewords | *Notes §3.2.5 Huffman Coding, p. 54*; frequencies counted from public-domain books (⚠️ **Not from the lecture notes:** the corpus and counting) |
 | Escape for characters not in the table (`ESC` + UTF-8 bytes) | ⚠️ **Not from the lecture notes.** General coding practice; UTF-8 is general computing |
 | Strand index and data-bit count in every strand | ⚠️ **Not from the lecture notes.** Our design, after the baseline's index |
 | Scrambling with a pattern seeded by the index | ⚠️ **Not from the lecture notes.** General coding technique |
-| One parity strand: XOR of all data strands, column by column | Parity: *Notes §3.3.3 Parity Checks, p. 59*. ⚠️ **Not from the lecture notes:** using it to fill an erasure (a lost strand at a known index) rather than to detect a flip |
+| How many parity strands: the protection t with the highest expected score, density × E[1 − H(e)] | Binomial: *Notes §2.4.1, Proposition 2.4.3, p. 33*; binary entropy: *§3.1.3 Entropy, p. 46*. ⚠️ **Not from the lecture notes:** the deletion rate is our own measurement, the score formula is the project's own, and the hypergeometric count of data strands among the deleted ones is general probability |
+| Parity strands: a Hamming code across the strands, column by column (none, one XOR strand, Hamming, or extended Hamming) | Parity: *Notes §3.3.3 Parity Checks, p. 59*; Hamming code: *§3.3.4 Hamming Codes, p. 59*; extended code: *Remark 3.3.5, p. 61*. ⚠️ **Not from the lecture notes:** using them to fill erasures (lost strands at known indices), and the rule that distance t + 1 fills t erasures |
 | Bits → bases with no CC or GG, by ranking | Counting allowed strings: *Notes §6.1.4 Counting Writable Strings, p. 99*. ⚠️ **Not from the lecture notes:** ranking (enumerative coding) itself |
 | Why no CC or GG | Our channel finding, Hypothesis 5 (⚠️ **Not from the lecture notes**) |
 | Reads are random fragments | *Notes §2.4.5, p. 36* (shotgun sequencing) |
 | Grouping reads by Hamming distance | *Notes §3.3.2, p. 58* (Hamming distance); grouping by it is our step |
 | Majority vote at every position | *Notes §3.3.2, p. 59* |
-| Rebuilding one missing strand from parity | As for the parity strand above; why strands go missing: Hypotheses 1 and 4 (⚠️ **Not from the lecture notes**) |
+| Rebuilding missing strands from the parity strands | Each check is an XOR equation, as above. ⚠️ **Not from the lecture notes:** solving them by elimination over XOR; why strands go missing (Hypotheses 1 and 4) |
 | Density (bits per base) | ⚠️ **Not from the lecture notes.** Project notebook's scoring |
 
 ### History of changes to `solution.py`
@@ -955,12 +959,30 @@ One row per change to the `solution.py` cell, oldest first.
 | v5 | 2026-11-23 | **New `encode` and `decode`; the baseline's are gone.** Text → Huffman bits (`char_to_bits`). Bits are packed into strands of **300 bases with no CC or GG anywhere**. Each strand holds 535 bits: a 12-bit strand index, a 10-bit count of its data bits, then up to 513 data bits and zero padding. Characters are never split across strands. Bits → bases by ranking: 21 blocks of 14 bases (25 bits each) and one of 6 bases (10 bits), each block ranked after the last base of the block before it so the joins are safe too; 1.783 bits per base. `decode` keeps only 300-base reads, votes per strand index on the decoded bits, and decodes each strand on its own; a strand that never comes back is skipped | With no CC or GG, every junction is cold (about 1% per junction, Hypothesis 5), so whole strands should come back often, with no need for markers. Offline checks: round trips exact on 7 test texts (empty, accents and emoji, 13,000 characters); no strand contains CC or GG; random 300-base junk decodes to nothing. Sample: 4 strands, 1,200 bases, density 2.973. Simulated cold-only channel (p = 0.0107, `LocalChannel`-style picking): 64–76 full reads, accuracy 1.0, score 2.973 in 5 of 5 runs. Losing one of the 4 strands drops accuracy to 0.74–0.77 and the score to 0.50–0.68 | **0.0000** (density 2.973, accuracy 0.0000). As expected: with p = 0.03 at every junction, a 300-base strand survives whole with chance 0.97²⁹⁹ ≈ 0.01% | **0.0000** (density 2.973, accuracy 0.4664): about 2 of the 4 strands were not recovered. Cause: substitution errors, about 0.5% per base, defeated the whole-read vote; no strand was lost ([Step 36](index.html#step-36)). The 4 strands are in the bank of tested strands | `db65be7` |
 | v6 | 2026-11-23 | **`decode` votes per position.** It keeps the 300-base reads, groups them so each group's reads are within 30 mismatches of the group's first read (Hamming distance, *Notes §3.3.2, p. 58*), takes a majority vote at every position *(Notes §3.3.2, p. 59)*, and decodes each consensus. If two groups claim the same index, the bigger one wins. **`encode` scrambles** every strand's bits after the index: it XORs them with a pseudo-random pattern seeded by the strand index (`_scramble`), so strands with identical data, as in repeated text, still differ in most positions | Step 36: v5 failed because about 0.5% of bases are substituted, so whole-read votes picked erroneous copies. Offline checks: on the real v5 reads, grouping and voting (before scrambling was added) gives accuracy 1.0, score 2.973. Error-free round trips exact on 7 texts. Without scrambling, `SAMPLE * 30` had strands only 7 positions apart and failed; with it, the closest pair is 187–188 apart. Simulated cold-only channel (p = 0.0104) with 0.5%, 1% and 2% substitutions per base: accuracy 1.0 in 15 of 15 runs. Decoding 13,380 characters takes 0.3 s | **0.0000** (density 2.973, accuracy 0.0000): 300-base strands rarely survive p = 0.03 | **2.9733** (density 2.973, accuracy 1.0000), [Step 38](index.html#step-38) | `db65be7` |
 | v7 | 2026-11-23 | **One parity strand.** `encode` adds one extra strand, whatever the text's length, with the reserved index 4095 (`PARITY`, the largest 12-bit number; data strands are limited to 4095). Its bits after the index are the XOR, column by column, of every data strand's bits after the index (count, data and padding, before scrambling); it is then scrambled and ranked like any strand. New `_rebuild` in `decode`: if the parity strand came back, it XORs it with every returned data strand. All zeros means nothing is missing. Otherwise, if exactly one data index is missing (one gap in 0, 1, 2, …, or, with no gap, the one after the last), the XOR is that strand's bits, used if its count is sane. Two or more missing: nothing is rebuilt. The data strands are identical to v6's | [Step 40](index.html#step-40): deletion is deterministic (Hypotheses 1 and 4), so a deleted strand loses its text on every run, and the score falls much faster than accuracy ([Step 39](index.html#step-39): `long 2` lost 11.7% of its text and 52% of its score). Parity *(Notes §3.3.3, p. 59)* rebuilds one lost strand per text. Offline checks: all five `evaluate` passages round-trip exactly, and still do with **any one strand deleted**, the parity strand included (32 cases). Through the walkthrough's `ModelChannel` (breaks, 0.5% substitutions) with one random strand deleted: accuracy 1.0 in 15 of 15 runs. Two deleted strands are not recovered: `long 2` without strands 10 and 13 still gives 0.8826, as in v6. Density cost of the extra strand: `short 1` 1.840 → 0.920, `short 2` 2.267 → 1.511, `SAMPLE` 2.973 → 2.379, `long 1` 2.827 → 2.473, `long 2` 3.023 → 2.845 | **0.0000** (density 2.379, accuracy 0.0000): 300-base strands rarely survive p = 0.03 | not run | `a0b4894` |
+| v8 | 2026-11-23 | **Parity strands from a Hamming code across the strands, as many as a 95% rule calls for.** Replaces v7's single parity strand. `encode` picks the least protection t whose chance of keeping the text whole, P(≤ t deleted) with deletions ~ Binomial(strands, 74/2584), is at least 0.95 (`_layout`): t = 0 no parity; t = 1 one XOR strand (as v7); t = 2 Hamming checks 1..r over the data strands at Hamming positions 3, 5, 6, 7, 9, … (shortened code, distance 3); t = 3 the same plus an overall parity (extended code, distance 4). If none reaches 0.95, t = 3. Each parity strand's index is 4095 − (16(d − 1) + j), so it tells the decoder the check j and the number of data strands d; data strands are capped at 240 (about 27,000 characters, against 4095 in v7). `_rebuild` writes each check as an XOR equation with the missing strands as unknowns and solves by elimination over XOR. The data strands are identical to v6/v7's | v7's one parity strand can't save `long 2`, which loses 2 strands on every run ([Step 40](index.html#step-40)); [Step 41](index.html#step-41) and the deletion-distribution cell show one parity strand keeps the 95% level only up to about 1000 characters. The user chose a Hamming code across strands *(Notes §3.3.4, p. 59)* over XOR groups and an any-k erasure code (parked below). Offline checks: all five `evaluate` passages round-trip exactly; t = 0, 1, 1, 1 and 2 for `short 1`, `short 2`, `SAMPLE`, `long 1` and `long 2`. Exact with any 1 strand deleted for every protected passage; `long 2` (16 data + 5 parity) exact with all 210 pairs deleted, and in 391 of 400 sampled triples; **`long 2` without strands 10 and 13 decodes exactly**, also through `ModelChannel`. Through `ModelChannel` with 1 or 2 random strands deleted: accuracy 1.0 in 15 of 15 runs. Density: `short 1` 1.840 (no parity, as v6), `short 2` 1.511, `SAMPLE` 2.379, `long 1` 2.473 (as v7), `long 2` 2.303 (v7 2.845). By length: t = 1 up to about 1000 characters, t = 2 at 2000, t = 3 from about 3000; P(text whole) 0.9419 at 5000 and 0.704 at 10,000, below target | **0.0000** (`SAMPLE`: density 2.379, accuracy 0.0000, as v7) | **2.3787** (`SAMPLE`: density 2.379, accuracy 1.0000). All five passages exact; `long 2` 2.3035 with its two deleted strands rebuilt; mean of five 2.1013, against v6's 2.2704 ([Step 42](index.html#step-42)) | not committed |
+| v9 | 2026-11-23 | **Parity picked by expected score, not a 95% target.** Only `_layout` changed (plus new `_info` and `_expected_info`; `TARGET` removed). For each option t = 0–3 (none, one XOR strand, Hamming, extended Hamming, as in v8) it computes the expected score up to a constant, E[1 − H(e)] / strands, and takes the highest (ties to the smaller t). The number deleted is Binomial(strands, 74/2584) *(Notes §2.4.1, Proposition 2.4.3, p. 33)*; with at most t deleted nothing is lost; with more, it assumes nothing is rebuilt, counts the data strands among the deleted ones (hypergeometric), and sets e = data strands lost / d. 1 − H(e) is the notebook's `evaluate` rule, 0 once e ≥ 0.5 *(Notes §3.1.3, p. 46)*. Encoding, the parity index scheme and decoding are unchanged | [Step 42](index.html#step-42): v8's 95% rule lowered the mean live score from 2.2704 to 2.1013, and an offline check gave v8 a lower expected score than v6 on every passage but `short 1`. **Choices:** t = 0 for 1–8 data strands (up to about 900 characters), t = 1 for 9–55, t = 3 for 56–57 and 66–120, t = 1 for 58–65 and 121–123, t = 0 for 124–240; t = 2 is never chosen, since t = 3 costs only one more strand. The jumps past 55 come from the model ignoring partial rebuilds when more than t strands are lost, which undervalues parity for long texts. **Passages:** `short 1`, `short 2`, `SAMPLE` and `long 1` get no parity (their strands are exactly v6's); `long 2` gets one XOR strand (17 strands, density 2.845). Offline checks: all five round-trip exactly; `long 2` exact with any one strand deleted; 5 other texts (empty, emoji, 13,000 characters, `SAMPLE` × 30) round-trip exactly with no CC or GG. Exact expected score (every set of up to 3 deleted strands, as in Step 42): mean 2.3721 (v6 2.3474, v8 2.0771); `long 2` 2.7153. **Expected on the live channel:** the first four passages send v6's strands, so they should repeat v6's scores; `long 2` should lose strands 10 and 13 again, which one parity strand can't rebuild (accuracy 0.8826, score about 1.36), so the five-passage mean should be about 2.25 | not run | **2.9733** (`SAMPLE`: density 2.973, accuracy 1.0000). Five passages exactly as predicted: `long 2` 1.3604 (accuracy 0.8826); mean of five 2.2534 ([Step 43](index.html#step-43)) | not committed |
 
 *v0 scores are the `evaluate` cell's saved output as of 2026-11-23. The date of that run wasn't recorded.*
 
 ### Ideas parked for later
 
 Improvements considered but not used yet. When one goes into `solution.py`, move it to the history table.
+
+- **Any-k erasure code for the parity strands (parked 2026-11-23).**
+  - **The idea:** k parity strands that can rebuild *any* k deleted strands, with k picked by the 95% rule: the least k with P(≤ k deleted) ≥ 0.95, deletions ~ Binomial(data strands + k, 0.0286) *(Notes §2.4.1, Proposition 2.4.3, p. 33)*. This is exactly what the deletion-distribution cell's "k or fewer" table assumes. A Reed–Solomon code does it, column by column across the strands.
+  - **Why it's better:** it needs the fewest parity strands at every length, and it keeps the 95% level at any length. Parity strands needed, against v8's Hamming scheme:
+
+    | characters | data strands | any-k code | v8 (Hamming) |
+    |---|---|---|---|
+    | 1000 | 9 | 1 (P = 0.9683) | 1 (0.9683) |
+    | 1814 | 16 | 2 (0.9861) | 5 (0.9788) |
+    | 5000 | 44 | 3 (0.9547) | 7 (0.9419, below target) |
+    | 10000 | 88 | 6 (0.9814) | 8 (0.704, below target) |
+    | 20000 | 176 | 9 (0.9585) | 9 (0.2215, below target) |
+
+  - **Why not now:** it needs arithmetic in a finite field, which is more code and harder to check. Plain XOR groups were also considered and rejected: they need 25 parity strands at 5000 characters and can't reach 95% past about 5000.
+  - ⚠️ **Not from the lecture notes:** Reed–Solomon and other erasure codes, and finite-field arithmetic.
+  - **Update (2026-11-23):** v9 picks protection by expected score instead of the 95% rule. An any-k code would be chosen the same way, over k = 0, 1, 2, …
 
 - **Capitals by prediction, then correction (parked 2026-11-23).**
   - **The idea:** lowercase the text and let the decoder re-capitalize the first letter of the text and the first letter after `.`, `!` or `?`. The encoder runs the same rule and stores corrections only for the letters the rule gets wrong, so the text comes back exactly.
@@ -1833,3 +1855,94 @@ Improvements considered but not used yet. When one goes into `solution.py`, move
   - Supports Hypotheses 1 and 4: strands with no CC or GG, made by the encoder, are deleted at a rate consistent with the base rate (2 of 16).
   - The full-length share alone, 4.7% of 28,000 reads, matches the 4.7% seen in the v5 diagnosis together-run ([Step 36](index.html#step-36)) and the one-piece-per-copy prediction of Hypothesis 5.
 - **Next (to do):** add redundancy that rebuilds a lost strand, for example a parity strand *(Notes §3.3.3 Parity Checks, p. 59)*. `long 2` is now a known test case: a design that recovers it fully on the live channel can rebuild deleted strands.
+
+### 2026-11-23 · Part 3, Step 1: Expected deleted strands, under 0.5 per passage up to 1814 characters, but two or more become likely past about 5000
+- **Setup:** a calculation in the cell `expected-deletions` (first line `# Expected number of deleted strands vs passage length`). Nothing is sent. Each strand is treated as deleted independently with probability p = 74/2584, the rate on independently random strands (Appendix C, "Caveats for analysis"). The number deleted is then Binomial(n, p) *(Notes §2.4.1 Bernoulli and Binomial, Proposition 2.4.3, p. 33)*: E[X] = np and Pr[X = k] = C(n, k) pᵏ(1 − p)ⁿ⁻ᵏ. n is the number of strands `solution.py` v7 makes, parity strand included, counted by encoding text of each length. The text is the five `evaluate` passages joined and repeated. The 95% interval for p is exact (Clopper–Pearson).
+- **Result:** p = 74/2584 = **0.0286** (95% interval 0.0226–0.0358).
+  ![Left: expected deleted strands (np) vs passage length, with the 95% range of p. Right: probability that 0, exactly 1, or 2 or more strands are deleted, p = 0.0286; 11 passage lengths, 50–20,000 characters](site/figures/expected-number-of-deleted-strands-vs-pa-1-604940.png)
+
+  | characters | strands (v7) | E[deleted] | 95% range | P(0) | P(1) | P(≥2) |
+  |---|---|---|---|---|---|---|
+  | 50 | 2 | 0.057 | 0.045–0.072 | 0.944 | 0.056 | 0.001 |
+  | 100 | 2 | 0.057 | 0.045–0.072 | 0.944 | 0.056 | 0.001 |
+  | 200 | 3 | 0.086 | 0.068–0.107 | 0.917 | 0.081 | 0.002 |
+  | 446 | 5 | 0.143 | 0.113–0.179 | 0.865 | 0.127 | 0.008 |
+  | 742 | 8 | 0.229 | 0.180–0.287 | 0.793 | 0.187 | 0.020 |
+  | 1000 | 10 | 0.286 | 0.226–0.358 | 0.748 | 0.220 | 0.032 |
+  | 1814 | 17 | 0.487 | 0.383–0.609 | 0.610 | 0.306 | 0.084 |
+  | 2000 | 19 | 0.544 | 0.428–0.681 | 0.576 | 0.323 | 0.102 |
+  | 5000 | 45 | 1.289 | 1.015–1.612 | 0.270 | 0.359 | 0.371 |
+  | 10000 | 89 | 2.549 | 2.007–3.188 | 0.075 | 0.198 | 0.727 |
+  | 20000 | 177 | 5.069 | 3.992–6.340 | 0.006 | 0.030 | 0.964 |
+
+- **Conclusion:**
+  - The expected number of deleted strands grows in proportion to the passage length: about one deleted strand per 4000 characters (0.0286 per strand, about 113 characters per data strand).
+  - **v7's single parity strand covers most of the risk up to about 2000 characters.** It rebuilds the "exactly 1" case, so the text is lost only with P(≥2): 0.8% for `SAMPLE` (446 characters), 3.2% at 1000 and 8.4% for `long 2` (1814).
+  - **`long 2` was unlucky but not unusual.** Losing 2 of its 17 strands ([Step 40](index.html#step-40)) had about an 8% chance.
+  - **Past about 5000 characters, one parity strand stops being enough.** P(≥2) is 0.371 at 5000 (more likely than 0 deleted) and 0.727 at 10,000.
+  - ⚠️ **Not from the lecture notes:** the deletion rate is our own measurement, and the Clopper–Pearson interval is a general statistics method.
+- **Still open:**
+  - Whether the encoder's own strands are deleted at the same rate as random ones. So far 2 of 26 (`long 2`'s strands 10 and 13), too few to tell.
+  - The independence assumption. Hypothesis 4 says deletion is a pseudo-random function of each sequence, which supports treating strands as independent, but it hasn't been tested for strands from the same passage.
+- **Next (to do):** if the grading passages can be long, protect against two or more deletions, for example a parity strand per group of strands *(Notes §3.3.3 Parity Checks, p. 59)*.
+
+### 2026-11-23 · Part 3, Step 1: v8 recovers long 2 on the live channel, but its mean score falls from 2.2704 to 2.1013
+- **Setup:** `solution.py` v8 (Hamming parity strands, as many as the 95% rule calls for), run by the `evaluate` cell on the five passages in `SAMPLES`, each on `LocalChannel(seed=1)` and once on the live server, with 4 reads per character. **Channel: live server** (`Channel()`) and `LocalChannel(seed=1)`. v8's data strands are the same as v6's, already in the bank. The 8 new parity strands (1 each for `short 2`, `SAMPLE` and `long 1`, 5 for `long 2`) were added to the bank as `False`. They were only sent mixed with their passage's other strands, so this run doesn't show whether any of them is deleted.
+- **Result:** every passage came back whole on the live channel.
+
+  | passage | characters | strands v6 → v8 | density v8 | live accuracy v8 | live score v6 ([Step 39](index.html#step-39)) | live score v8 |
+  |---|---|---|---|---|---|---|
+  | `short 1` | 69 | 1 → 1 | 1.840 | 1.0000 | 1.8400 | 1.8400 |
+  | `short 2` | 170 | 2 → 3 | 1.511 | 1.0000 | 2.2667 | 1.5111 |
+  | `SAMPLE` | 446 | 4 → 5 | 2.379 | 1.0000 | 2.9733 | 2.3787 |
+  | `long 1` | 742 | 7 → 8 | 2.473 | 1.0000 | 2.8267 | 2.4733 |
+  | `long 2` | 1814 | 16 → 21 | 2.303 | **1.0000** | 1.4455 | **2.3035** |
+
+  Mean live score: **2.1013** (v6 2.2704). Every `LocalChannel` score is 0.0000, as with v6.
+
+- **Result, expected score (offline check, nothing sent):** a script outside the notebook encoded each passage with v6 (`solution1.py`), v7 and v8. It deleted every set of up to 3 strands, decoded what was left, and scored the result with `evaluate`'s rule. Each set was weighted by its probability with every strand deleted independently, p = 74/2584 *(Notes §2.4.1, Proposition 2.4.3, p. 33)*. Sets of 4 or more deleted strands count as score 0. This assumes every strand that survives is decoded exactly, as in every live run so far.
+
+  | passage | E[score] v6 (no parity) | E[score] v7 (1 parity strand) | E[score] v8 (95% rule) | P(text whole) v6 / v7 / v8 |
+  |---|---|---|---|---|
+  | `short 1` | 1.7873 | 0.9192 | 1.7873 | 0.9714 / 0.9992 / 0.9714 |
+  | `short 2` | 2.1427 | 1.5075 | 1.5075 | 0.9435 / 0.9976 / 0.9976 |
+  | `SAMPLE` | 2.7063 | 2.3616 | 2.3616 | 0.8903 / 0.9923 / 0.9923 |
+  | `long 1` | 2.5089 | 2.4342 | 2.4329 | 0.8160 / 0.9795 / 0.9795 |
+  | `long 2` | 2.5918 | **2.7154** | 2.2963 | 0.6282 / 0.9160 / 0.9966 |
+  | mean | **2.3474** | 1.9876 | 2.0771 | |
+
+- **Conclusion:**
+  - **v8 rebuilds real deletions on the live channel.** `long 2`'s strands 10 and 13 are deleted ([Step 40](index.html#step-40)), yet the passage came back exactly. Its score rose from 1.4455 to 2.3035, as the offline check for v8 predicted.
+  - **The mean live score fell anyway**, from 2.2704 to 2.1013. The parity strands cost density on `short 2`, `SAMPLE` and `long 1`, which lost nothing under v6. Over these five passages that cost (0.76 + 0.59 + 0.35) is larger than the gain on `long 2` (0.86).
+  - **The offline check says this isn't luck.** In expectation over random strand contents, v8 scores below v6 on every passage except `short 1`, where they're identical: mean 2.08 against 2.35. The 95% rule maximises the chance the text comes back whole (0.98–0.997 for v8), not the expected score. A parity strand costs a whole 300 bases of density on every run, but it only pays off in the 3–37% of runs where a strand is lost.
+  - **One parity strand beats none only on `long 2`** (2.72 against 2.59). Below that length the expected loss from a deletion is smaller than the density cost. This is a first hint of where parity starts to pay, not a measured crossover.
+  - ⚠️ **Not from the lecture notes:** the score formula is the project's own definition. Independent deletion at p = 74/2584 is our own measurement and model (Hypotheses 1 and 4).
+- **Side observation:** v6 decoded part of `long 1` and `long 2` on `LocalChannel` (0.1563 and 0.1246, [Step 39](index.html#step-39)). v8 decodes none of either. The strand sets differ, so `LocalChannel` gives different reads. Not investigated.
+- **Still open:**
+  - Whether the right target is reliability (the 95% rule) or expected score. They pick different designs: v6 for passages up to about 742 characters, one parity strand at 1814.
+  - The expected scores rest on independent deletion with the same p for the encoder's strands as for random ones. So far 2 of 26 encoder strands are deleted.
+  - Whether any of the 8 new parity strands is deleted. Only a solo send would show it.
+- **Next (to do):** choose the protection level by expected score, not by a fixed 95% target. For each t, compute density × E[1 − H(e)] and keep the t with the highest value.
+
+### 2026-11-23 · Part 3, Step 1: v9 scores exactly as predicted live, mean 2.2534, with long 2 losing its two deleted strands again
+- **Setup:** `solution.py` v9 (protection picked by expected score), run by the `evaluate` cell on the five passages in `SAMPLES`, each on `LocalChannel(seed=1)` and once on the live server, with 4 reads per character. **Channel: live server** (`Channel()`) and `LocalChannel(seed=1)`. v9 sends v6's strands for `short 1`, `short 2`, `SAMPLE` and `long 1`, and v6's 16 data strands plus one new XOR parity strand for `long 2`. That parity strand is added to the bank as `False`. It was only sent mixed with the data strands.
+- **Result:**
+
+  | passage | strands | density | live accuracy | live score v9 | predicted (history table, v9 row) | v6 | v8 |
+  |---|---|---|---|---|---|---|---|
+  | `short 1` | 1 | 1.840 | 1.0000 | 1.8400 | 1.8400 | 1.8400 | 1.8400 |
+  | `short 2` | 2 | 2.267 | 1.0000 | 2.2667 | 2.2667 | 2.2667 | 1.5111 |
+  | `SAMPLE` | 4 | 2.973 | 1.0000 | 2.9733 | 2.9733 | 2.9733 | 2.3787 |
+  | `long 1` | 7 | 2.827 | 1.0000 | 2.8267 | 2.8267 | 2.8267 | 2.4733 |
+  | `long 2` | 17 | 2.845 | 0.8826 | 1.3604 | about 1.36 | 1.4455 | 2.3035 |
+  | mean | | | | **2.2534** | about 2.25 | 2.2704 | 2.1013 |
+
+  `LocalChannel` scores are all 0.0000. Its accuracies are 0.1563 for `long 1` (as v6) and 0.0650 for `long 2`.
+
+- **Conclusion:**
+  - **The live channel behaved exactly as predicted.** Every live score matches the prediction made before the run. The first four passages send the same strands as v6 and got v6's scores. `long 2` lost strands 10 and 13 again (accuracy 0.8826, as in [Step 39](index.html#step-39)), which one parity strand can't rebuild. This is more evidence that deletion is deterministic (supports Hypothesis 1).
+  - **On these five passages v9 is between v6 and v8.** It's 0.017 below v6 because `long 2`'s parity strand costs density without saving anything here. It's 0.15 above v8 because the first four passages no longer pay for parity.
+  - **These five passages are one draw.** v9 was chosen for its expected score over passages whose deleted strands aren't known in advance: mean 2.3721 against v6 2.3474 and v8 2.0771 ([Step 42](index.html#step-42)). `long 2` is the unlucky case, with 2 of 16 data strands deleted (chance about 8%, [Step 41](index.html#step-41)). Ranking the versions by these five live scores would mostly reward knowing that one passage's deletions.
+  - ⚠️ **Not from the lecture notes:** the score formula is the project's own definition.
+- **Still open:** whether the grading passages are long enough for parity to matter. At 9–55 data strands (about 1000–6000 characters), v9 uses one parity strand.
+- **Next (to do):** improve the expected-score model for long texts. It assumes nothing is rebuilt once more than t strands are lost, which undervalues Hamming parity past about 55 data strands.
