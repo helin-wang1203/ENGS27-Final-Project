@@ -4,7 +4,7 @@ import random
 
 STRAND = 300        # bases per strand
 BLOCK = 14          # bases per ranked block; a strand is 21 blocks of 14 plus one of 6
-INDEX_BITS = 12     # strand number, so up to 4096 strands
+INDEX_BITS = 12     # strand number: data strands 0, 1, 2, ...; the top value marks the parity strand
 LENGTH_BITS = 10    # how many data bits this strand holds (the rest is padding)
 NEXT = {"A": "ACGT", "C": "AGT", "G": "ACT", "T": "ACGT"}   # allowed next base: never CC or GG
 START = "A"         # stands in for the base before a strand's first base (allows all four)
@@ -107,6 +107,7 @@ BLOCK_SIZES = [BLOCK] * (STRAND // BLOCK) + ([STRAND % BLOCK] if STRAND % BLOCK 
 STRAND_BITS = sum(_block_bits(n) for n in BLOCK_SIZES)
 DATA_BITS = STRAND_BITS - INDEX_BITS - LENGTH_BITS
 assert DATA_BITS < 2 ** LENGTH_BITS
+PARITY = 2 ** INDEX_BITS - 1       # index of the parity strand (4095), never used for data
 
 def _unrank(v, prev, n):
     """Number v -> the v-th allowed n-base string after base prev (A < C < G < T order)."""
@@ -165,6 +166,11 @@ def bases_to_bits(seq):
 # strand costs only its own characters. Everything after the index is scrambled with a pattern
 # seeded by the index, so two strands never look alike even if their data is the same
 # (repeated text); otherwise decode's grouping could merge them.
+#
+# One extra PARITY strand, whatever the text's length: its bits after the index are the XOR,
+# column by column, of every data strand's bits after the index (before scrambling). So every
+# column has even parity (Notes §3.3.3 Parity Checks, p. 59). If one strand is deleted, the
+# decoder knows which index is missing, and XOR-ing everything that came back rebuilds it.
 
 def _scramble(bits, i):
     """XOR bits with a fixed pseudo-random pattern chosen by strand index i. Doing it twice
@@ -181,13 +187,36 @@ def encode(text):
             cur = ""
         cur += code
     chunks.append(cur)
-    if len(chunks) > 2 ** INDEX_BITS:
+    if len(chunks) > PARITY:
         raise ValueError("text too long for INDEX_BITS")
-    strands = []
+    strands, parity = [], 0
     for i, data in enumerate(chunks):
         rest = (format(len(data), f"0{LENGTH_BITS}b") + data).ljust(STRAND_BITS - INDEX_BITS, "0")
+        parity ^= int(rest, 2)                            # running XOR of every data strand
         strands.append(bits_to_bases(format(i, f"0{INDEX_BITS}b") + _scramble(rest, i)))
+    rest = format(parity, f"0{STRAND_BITS - INDEX_BITS}b")
+    strands.append(bits_to_bases(format(PARITY, f"0{INDEX_BITS}b") + _scramble(rest, PARITY)))
     return strands
+
+def _rebuild(best):
+    """If exactly one data strand is missing and the parity strand came back, put the missing
+    strand back into best (index -> (copies, unscrambled bits)). XOR of the parity strand and
+    every data strand that came back equals the missing strand; all zeros means none is missing.
+    The missing index is the one gap in 0, 1, 2, ...; with no gap, it's the one after the last."""
+    if PARITY not in best:
+        return
+    x = int(best.pop(PARITY)[1], 2)
+    for _, rest in best.values():
+        x ^= int(rest, 2)
+    if x == 0:
+        return                                            # nothing missing
+    top = max(best, default=-1)
+    gaps = [i for i in range(top + 1) if i not in best]
+    if len(gaps) > 1:
+        return                                            # two or more lost: parity can't help
+    rest = format(x, f"0{STRAND_BITS - INDEX_BITS}b")
+    if int(rest[:LENGTH_BITS], 2) <= DATA_BITS:           # a sane count, so trust the rebuild
+        best[gaps[0] if gaps else top + 1] = (0, rest)
 
 def _within(a, b, limit):
     """True if a and b differ in at most `limit` positions (Hamming distance, Notes §3.3.2, p. 58)."""
@@ -229,6 +258,7 @@ def decode(reads):
         i = int(bits[:INDEX_BITS], 2)
         if i not in best or len(g) > best[i][0]:          # two groups claim one index: keep the bigger
             best[i] = (len(g), _scramble(bits[INDEX_BITS:], i))
+    _rebuild(best)                                        # one lost strand: rebuild it from parity
     out = []
     for i in sorted(best):                                # a strand that never came back is skipped
         rest = best[i][1]                                 # unscrambled: [count][data][padding]

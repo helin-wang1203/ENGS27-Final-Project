@@ -518,11 +518,14 @@ Every strand confirmed to come back with **no reads at all** when sent to `Chann
 | 119 | `TTGTGATGTGAACTGCATGTATCGCTAGTTGAGCGAGCTGAAATCTAATTTGCTATGTCAGAAGCTTACACGCAGCGTATTAGTAATTACTTTGTCCCCCCCCCCGTATAAGCAGTGTTTCAGCGCACGTTGCGTCACTCTCGAAAGTAATCGCAGAAACGTACGTGTGCATGCATGCACTTAGAAGCACGTCGACAGTG` | strand 485 of 500 in the C-run test, `CCCCCCCCCC` run group (`random.Random(14)`, 200 bases) | 200, 1000, 1000 (C-run test, sent alone) |
 | 120 | `AAAGAGCGCCCGCCCTAGCTAT` | strand 34 of the 113 the baseline (`example_solution.py`) makes for `SAMPLE` (22 bases) | 1000, 1000 (baseline low-count check, sent alone) |
 | 121 | `AACATGCTAGCGGCCTCACGGC` | strand 78 of the 113 the baseline makes for `SAMPLE` (22 bases) | 1000, 1000 (baseline low-count check, sent alone) |
+| 122 | `AAAAATGATTTTGAACTTTCAGAAATGCGCTGATACGAAGAAACTGTCGCTTAAAAATGACGACGTTGTTAACAGCATCTCATTAATCTAAGTTCGCTCGTCGTTATTTATCGTATGCAGTCGTCTACAATTGAACATAGAGCGCTGATACGCAATAATTCAGAGAAACTTGTGAATATTTGCAACTAAATGTTTCGAACGCTTAGTCAACGAAGAAAGAGTCTCATTGTTCATAGTCGTTATCTTAAGTGTCTACGTCTTTTGCGCTCACAATGAAAAACACATTACAGACGTACTATG` | strand 10 of the 16 `solution.py` v6 makes for the test passage `long 2` (300 bases, no CC or GG) | 1000, 1000 (long 2 solo test, sent alone) |
+| 123 | `AAAACACGATAACTAAAGAAGTCGTCAAAAACTAATATGAGCTAACTTTCACGCTGAATTCTCGCGAAAACAGCGATGATTAATGATGACATTCTATCATATCATTCGCTAAAGTGATGCGTGCTGCGAATTAATCATTGAGAGTTCAAATCAAAGAAAATTGCAATAACTAGCTTCGAAAGACACTCTCAGAGAGCACGCACTGTTCAACTGTGTCACATGTAAGCACTTTTTATTCGTATATTGCTCATCGTCGTTTCGATGTCGAAGAAGCTGATCTCGAGTGCGCAGAGAATGCAA` | strand 13 of the 16 `solution.py` v6 makes for `long 2` (300 bases, no CC or GG) | 1000, 1000 (long 2 solo test, sent alone) |
 
 - Rows 1–4 and 8–17 are 120 bases long; rows 5–7 are 123, 125 and 129. Positions are 0-based.
 - Rows 1–7 all come from strand 67. Rows 8–17 are unrelated random strands; one of them, row 17, has no forced tail.
 - Rows 18–31 are unrelated random strands from the length test, 30 to 300 bases long, rows 32–37 are from the long length test, 500 to 1000 bases long, rows 38–52 are from the mixed-batch test, 310 to 949 bases long, rows 53–74 are from the same-length breakage-context test, 9 of length 100 and 13 of length 1000, rows 75–79 are from the same test, 4 of length 100 and 1 of length 1000, rows 80–82 are reverse complements from the reverse-complement test, row 83 is from the mixed-batch test, found later, rows 84–102 are from the G-run test, and rows 103–119 from the C-run test, 200 bases each. Their full sequences are in the table; the sequences blocks below cover only the strand 67 family.
 - Rows 120–121 are 22 bases long, the baseline's strand length: a 6-base index followed by a 16-base payload. They're the shortest deleted strands so far.
+- Rows 122–123 are 300-base strands of the v6 solution, with no CC or GG and scrambled bits. They're the first deleted strands from the solution itself, found because the live `evaluate` run on `long 2` lost exactly their text.
 
 ### Where each strand came from
 Each link opens that step of the Findings log on the site. Cells are named by their first line.
@@ -690,7 +693,7 @@ An ongoing record of every sequence sent to the live channel, kept as evidence a
 - **Update the table below** when strands are added.
 
 ### Contents (2026-11-14)
-Built from the notebook's seeds and saved outputs, and checked against Appendix B: the `True` items match its confirmed strands exactly (17 on the first build, 31 after the length-test retest, 37 after the long retest, 52 after the mixed-batch follow-up, 74 after the same-length solo retest, 79 after the low-count retest, 82 after the reverse-complement test, 83 after the break-context survey, 102 after the G-run test, 119 after the C-run test, 121 after the baseline low-count check).
+Built from the notebook's seeds and saved outputs, and checked against Appendix B: the `True` items match its confirmed strands exactly (17 on the first build, 31 after the length-test retest, 37 after the long retest, 52 after the mixed-batch follow-up, 74 after the same-length solo retest, 79 after the low-count retest, 82 after the reverse-complement test, 83 after the break-context survey, 102 after the G-run test, 119 after the C-run test, 121 after the baseline low-count check, 123 after the long 2 solo test).
 
 | Source (Findings log entry) | Sequences | Lengths | Deleted |
 |---|---|---|---|
@@ -711,7 +714,8 @@ Built from the notebook's seeds and saved outputs, and checked against Appendix 
 | The 4 strands `solution.py` v5 makes for `SAMPLE`: 300 bases, no CC or GG ("v5 fails live because reads carry substitution errors, about 0.5% per base, not because strands are lost"), added 2026-11-23 | 4 | 300 | 0 |
 | The 113 strands the baseline (`example_solution.py`) makes for `SAMPLE` ("Baseline strands, 2 of 113 are deleted"), added 2026-11-23 | 113 | 22 | 2 |
 | The 4 strands `solution.py` v6 makes for `SAMPLE`: 300 bases, no CC or GG, scrambled ("v6 decodes the sample perfectly on the live channel, score 2.9733"), added 2026-11-23 | 4 | 300 | 0 |
-| **Total** | **4095** | 22–1000 | **121** |
+| The 26 strands `solution.py` v6 makes for the four new test passages `short 1`, `short 2`, `long 1` and `long 2`: 300 bases, no CC or GG, scrambled ("Five passages on the live channel, four perfect, the longest loses two of 16 strands"), added 2026-11-23. `long 2`'s 16 were then sent alone ("long 2 solo test, strands 10 and 13 are deleted"): 14 returned 1000 of 1000 reads twice, strands 10 and 13 returned 0 twice. The other 10 strands (`short 1`, `short 2`, `long 1`) have only been in mixed runs, but every passage they carry came back whole | 26 | 300 | 2 |
+| **Total** | **4121** | 22–1000 | **123** |
 
 - The 30 strands in "Survivor repeat test, 30 surviving strands return reads in 450 of 450 requests" are starter strands, so they are already counted once.
 - **Pending (resolved 2026-11-14):** the length test's 14 strands that returned 0 reads were held out until confirmed. The retest gave 0 reads again for all 14, so they are now in the bank as `True` and in Appendix B as rows 18–31.
@@ -768,6 +772,7 @@ Claims about the channel that experiments are testing. Each one is numbered, and
   - **Supports:** [Step 33: G-run test](index.html#step-33). 19 of 500 new strands returned 0 reads to one request of 200 and two of 1000, 57 of 57 requests empty. The other 481 returned all 200 of 200 reads, with no partial returns. The rate, 19 of 500 (3.8%), is kept apart from the 74 of 2584 because these strands were drawn without CC or GG outside their central run.
   - **Supports:** [Step 34: C-run test](index.html#step-34). 17 of 500 new strands returned 0 reads to one request of 200 and two of 1000, 51 of 51 requests empty. The other 483 returned all 200 of 200 reads. Kept apart from the 74 of 2584 for the same reason as the G-run test's strands.
   - **Supports:** [Step 37: Baseline strands](index.html#step-37). 2 of 113 baseline strands (22 bases) are deleted: 0 reads to two solo requests of 1000 each, after only 1 and 8 chance reads in a batch of 5000. Kept apart from the 74 of 2584 because the baseline's strands aren't independently random (they share index prefixes).
+  - **Supports:** [Step 40: long 2 solo test](index.html#step-40). The live `evaluate` run on `long 2` lost exactly the text of 2 strands; sent alone, strands 10 and 13 returned 0 reads to two requests of 1000 each, 4 of 4 empty, and the other 14 returned 1000 of 1000 reads in all 28 requests. Kept apart from the 74 of 2584 because the strands carry encoded text, not random bases.
 - **Caveats:**
   1. **Few repeats.** Most lost strands were tested only twice. Two matching runs of 400 strands make the claim very likely, not proven.
      - **Update (2026-11-14):** resolved for lost strands. The repeat test gives each at least 32 empty requests in a row. Still open for survivors, which haven't been repeated beyond the tail test's two runs.
@@ -850,6 +855,7 @@ Claims about the channel that experiments are testing. Each one is numbered, and
   - **Supports:** [Step 33: G-run test](index.html#step-33). Deletion was spread over all five groups: 4, 4, 4, 2 and 5 of 100 for runs of 0, 2, 3, 6 and 10 Gs. A long G run, and the absence of CC and GG elsewhere, didn't change the rate beyond chance (19 of 500 in all).
   - **Supports:** [Step 34: C-run test](index.html#step-34). Deletion was again spread over all groups: 1, 4, 4, 4 and 4 of 100 for runs of 0, 2, 3, 6 and 10 Cs (17 of 500 in all).
   - **Supports:** [Step 37: Baseline strands](index.html#step-37). Deletion also happens at 22 bases, below the 30–1000 tested before: 2 of 113 (1.8%), about the base rate.
+  - **Supports:** [Step 40: long 2 solo test](index.html#step-40). Strands with no CC or GG, made by the v6 encoder, are deleted too: 2 of 16 (12.5%, exact 95% interval 1.6%–38%), consistent with the base rate given so few strands. Avoiding hot junctions doesn't avoid deletion.
 - **Caveats:**
   1. **Not identified.** Without the actual function, "pseudo-random" means "no pattern found". A subtle content rule that no test has probed can't be ruled out.
   2. **The three T→A holdouts.** The three single-base changes that kept strand 67 deleted were all T→A, at bases 7, 67 and 72. That has about a 1.4% chance if the three are spread at random over the strand's 120 bases, 29 of them T. But it was noticed after the fact, the other 26 T→A changes restored the strand, and 3 of 120 is the base rate. Most likely a coincidence.
@@ -907,7 +913,7 @@ This section shows how the current `solution.py` turns an example English string
 - **Where it comes from:** the notebook cell `solution-walkthrough`, just after the `%%writefile solution.py` cell. The walkthrough below is that cell's saved output.
 - **Keeping it current:** after every change to the `solution.py` cell, re-run the `solution.py` cell, then the walkthrough cell, and save the notebook.
 - **Channel:** `ModelChannel`, an offline model of the live channel defined in the cell: breaks by Hypothesis 5 (0.42 after CC or GG, 0.0104 elsewhere), one piece per broken copy, nothing under 8 bases, and 0.5% substitutions per base (Step 36). It sends nothing to the live server and adds nothing to the bank of tested strands (Appendix C). `LocalChannel` isn't used because it almost never returns a whole 300-base strand.
-- **When the design changes:** the step-by-step trace follows the v6 design (updated 2026-11-23; it traced the baseline before). If `solution.py` stops matching it, the cell says so and shows only the strands and the decoded text. The trace will then need updating for the new design.
+- **When the design changes:** the step-by-step trace follows the v7 design (updated 2026-11-23; it traced v6 and, before that, the baseline). Its `DELETED` setting removes whole strands before the channel, to show the parity rebuild; the saved output deletes strand 0 of a 3-data-strand example. If `solution.py` stops matching it, the cell says so and shows only the strands and the decoded text. The trace will then need updating for the new design.
 - **Saved versions:** `example_solution.py` is the baseline (v0). `solution1.py` is a copy of v6, the first version that worked on the live channel (score 2.9733), kept as a record while `solution.py` keeps changing.
 
 ### Walkthrough
@@ -916,17 +922,19 @@ This section shows how the current `solution.py` turns an example English string
 
 ### What each step rests on
 
-| Step (v6) | Source |
+| Step (v7) | Source |
 |---|---|
 | Characters → Huffman codewords | *Notes §3.2.5 Huffman Coding, p. 54*; frequencies counted from public-domain books (⚠️ **Not from the lecture notes:** the corpus and counting) |
 | Escape for characters not in the table (`ESC` + UTF-8 bytes) | ⚠️ **Not from the lecture notes.** General coding practice; UTF-8 is general computing |
 | Strand index and data-bit count in every strand | ⚠️ **Not from the lecture notes.** Our design, after the baseline's index |
 | Scrambling with a pattern seeded by the index | ⚠️ **Not from the lecture notes.** General coding technique |
+| One parity strand: XOR of all data strands, column by column | Parity: *Notes §3.3.3 Parity Checks, p. 59*. ⚠️ **Not from the lecture notes:** using it to fill an erasure (a lost strand at a known index) rather than to detect a flip |
 | Bits → bases with no CC or GG, by ranking | Counting allowed strings: *Notes §6.1.4 Counting Writable Strings, p. 99*. ⚠️ **Not from the lecture notes:** ranking (enumerative coding) itself |
 | Why no CC or GG | Our channel finding, Hypothesis 5 (⚠️ **Not from the lecture notes**) |
 | Reads are random fragments | *Notes §2.4.5, p. 36* (shotgun sequencing) |
 | Grouping reads by Hamming distance | *Notes §3.3.2, p. 58* (Hamming distance); grouping by it is our step |
 | Majority vote at every position | *Notes §3.3.2, p. 59* |
+| Rebuilding one missing strand from parity | As for the parity strand above; why strands go missing: Hypotheses 1 and 4 (⚠️ **Not from the lecture notes**) |
 | Density (bits per base) | ⚠️ **Not from the lecture notes.** Project notebook's scoring |
 
 ### History of changes to `solution.py`
@@ -946,6 +954,7 @@ One row per change to the `solution.py` cell, oldest first.
 | v4 | 2026-11-23 | Added `bits_to_char(bits)`, the inverse of `char_to_bits`: it reads bits until they match a codeword, and after `ESC` reads one UTF-8 character. Trailing bits that don't finish a codeword are ignored; damaged UTF-8 becomes `�`. Not used by `decode` yet | Needed for `decode`. Checked: 6 test strings round-trip exactly, including `""`, `"%%%"` and an emoji. **Padding caveat:** `r` is `0000`, so 4 or more zero bits of padding decode as extra `r`s. The decoder must be given only the real bits, through a length or end marker | not run (behaviour same as v0) | not run (behaviour same as v0) | `db65be7` |
 | v5 | 2026-11-23 | **New `encode` and `decode`; the baseline's are gone.** Text → Huffman bits (`char_to_bits`). Bits are packed into strands of **300 bases with no CC or GG anywhere**. Each strand holds 535 bits: a 12-bit strand index, a 10-bit count of its data bits, then up to 513 data bits and zero padding. Characters are never split across strands. Bits → bases by ranking: 21 blocks of 14 bases (25 bits each) and one of 6 bases (10 bits), each block ranked after the last base of the block before it so the joins are safe too; 1.783 bits per base. `decode` keeps only 300-base reads, votes per strand index on the decoded bits, and decodes each strand on its own; a strand that never comes back is skipped | With no CC or GG, every junction is cold (about 1% per junction, Hypothesis 5), so whole strands should come back often, with no need for markers. Offline checks: round trips exact on 7 test texts (empty, accents and emoji, 13,000 characters); no strand contains CC or GG; random 300-base junk decodes to nothing. Sample: 4 strands, 1,200 bases, density 2.973. Simulated cold-only channel (p = 0.0107, `LocalChannel`-style picking): 64–76 full reads, accuracy 1.0, score 2.973 in 5 of 5 runs. Losing one of the 4 strands drops accuracy to 0.74–0.77 and the score to 0.50–0.68 | **0.0000** (density 2.973, accuracy 0.0000). As expected: with p = 0.03 at every junction, a 300-base strand survives whole with chance 0.97²⁹⁹ ≈ 0.01% | **0.0000** (density 2.973, accuracy 0.4664): about 2 of the 4 strands were not recovered. Cause: substitution errors, about 0.5% per base, defeated the whole-read vote; no strand was lost ([Step 36](index.html#step-36)). The 4 strands are in the bank of tested strands | `db65be7` |
 | v6 | 2026-11-23 | **`decode` votes per position.** It keeps the 300-base reads, groups them so each group's reads are within 30 mismatches of the group's first read (Hamming distance, *Notes §3.3.2, p. 58*), takes a majority vote at every position *(Notes §3.3.2, p. 59)*, and decodes each consensus. If two groups claim the same index, the bigger one wins. **`encode` scrambles** every strand's bits after the index: it XORs them with a pseudo-random pattern seeded by the strand index (`_scramble`), so strands with identical data, as in repeated text, still differ in most positions | Step 36: v5 failed because about 0.5% of bases are substituted, so whole-read votes picked erroneous copies. Offline checks: on the real v5 reads, grouping and voting (before scrambling was added) gives accuracy 1.0, score 2.973. Error-free round trips exact on 7 texts. Without scrambling, `SAMPLE * 30` had strands only 7 positions apart and failed; with it, the closest pair is 187–188 apart. Simulated cold-only channel (p = 0.0104) with 0.5%, 1% and 2% substitutions per base: accuracy 1.0 in 15 of 15 runs. Decoding 13,380 characters takes 0.3 s | **0.0000** (density 2.973, accuracy 0.0000): 300-base strands rarely survive p = 0.03 | **2.9733** (density 2.973, accuracy 1.0000), [Step 38](index.html#step-38) | `db65be7` |
+| v7 | 2026-11-23 | **One parity strand.** `encode` adds one extra strand, whatever the text's length, with the reserved index 4095 (`PARITY`, the largest 12-bit number; data strands are limited to 4095). Its bits after the index are the XOR, column by column, of every data strand's bits after the index (count, data and padding, before scrambling); it is then scrambled and ranked like any strand. New `_rebuild` in `decode`: if the parity strand came back, it XORs it with every returned data strand. All zeros means nothing is missing. Otherwise, if exactly one data index is missing (one gap in 0, 1, 2, …, or, with no gap, the one after the last), the XOR is that strand's bits, used if its count is sane. Two or more missing: nothing is rebuilt. The data strands are identical to v6's | [Step 40](index.html#step-40): deletion is deterministic (Hypotheses 1 and 4), so a deleted strand loses its text on every run, and the score falls much faster than accuracy ([Step 39](index.html#step-39): `long 2` lost 11.7% of its text and 52% of its score). Parity *(Notes §3.3.3, p. 59)* rebuilds one lost strand per text. Offline checks: all five `evaluate` passages round-trip exactly, and still do with **any one strand deleted**, the parity strand included (32 cases). Through the walkthrough's `ModelChannel` (breaks, 0.5% substitutions) with one random strand deleted: accuracy 1.0 in 15 of 15 runs. Two deleted strands are not recovered: `long 2` without strands 10 and 13 still gives 0.8826, as in v6. Density cost of the extra strand: `short 1` 1.840 → 0.920, `short 2` 2.267 → 1.511, `SAMPLE` 2.973 → 2.379, `long 1` 2.827 → 2.473, `long 2` 3.023 → 2.845 | **0.0000** (density 2.379, accuracy 0.0000): 300-base strands rarely survive p = 0.03 | not run | not committed |
 
 *v0 scores are the `evaluate` cell's saved output as of 2026-11-23. The date of that run wasn't recorded.*
 
@@ -1777,3 +1786,50 @@ Improvements considered but not used yet. When one goes into `solution.py`, move
   - Run several live runs and other passages, to see how often a strand is lost and how the score varies.
   - Add redundancy against deleted strands, for example a parity strand *(Notes §3.3.3 Parity Checks, p. 59)*.
 
+### 2026-11-23 · Part 3, Step 1: Five passages on the live channel, four perfect, the longest loses two of 16 strands
+- **Setup:** `solution.py` v6, unchanged since [Step 38](index.html#step-38). The notebook's `evaluate` cell now runs five passages, `SAMPLES`: `short 1`, `short 2`, `SAMPLE`, `long 1` and `long 2`. The four new ones were written for testing. Each is evaluated on `LocalChannel(seed=1)` and then once on the live server, with 4 reads per character. **Channel: live server** (`Channel()`) and `LocalChannel(seed=1)`. The 26 new strands (1 + 2 + 7 + 16) are in the bank of tested strands. `SAMPLE`'s 4 strands were already there.
+- **Result:**
+
+  | passage | characters | strands | bases | density | live accuracy | live score | `LocalChannel` accuracy |
+  |---|---|---|---|---|---|---|---|
+  | `short 1` | 69 | 1 | 300 | 1.840 | 1.0000 | 1.8400 | 0.0000 |
+  | `short 2` | 170 | 2 | 600 | 2.267 | 1.0000 | 2.2667 | 0.0000 |
+  | `SAMPLE` | 446 | 4 | 1200 | 2.973 | 1.0000 | 2.9733 | 0.0000 |
+  | `long 1` | 742 | 7 | 2100 | 2.827 | 1.0000 | 2.8267 | 0.1563 |
+  | `long 2` | 1814 | 16 | 4800 | 3.023 | **0.8826** | **1.4455** | 0.1246 |
+
+  Mean live score over the five: **2.2704**. Every `LocalChannel` score is 0.0000.
+
+- **Result, which strands `long 2` lost (offline check, nothing sent):** `long 2`'s strands hold 113, 116, 111, 119, 114, 116, 117, 109, 118, 117, 118, 114, 112, 95, 115 and 110 characters. Losing whole strands cuts out exactly their characters. No single strand gives accuracy 0.8826. Losing two gives it in only two ways: strands **8 and 13**, or **10 and 13** (213 of 1814 characters). Losing three never gives it.
+- **Result, density depends on how full the last strand is:** compressed, every passage uses 4.41–4.59 bits per character. The strands' data space (513 bits each) is 62% full for `short 1`, 76% for `short 2`, 96% for `SAMPLE`, 92% for `long 1` and 100% for `long 2`, which is the same order as the densities.
+- **Conclusion:**
+  - **v6 is exact whenever no strand is lost.** Four of five passages came back perfectly, at lengths from 69 to 742 characters.
+  - **The one failure looks like lost strands, not bad reads.** The loss matches two whole strands exactly, with strand 13 in both possibilities. At the 2.9% deletion rate of Hypothesis 1, two or more of 16 strands are deleted in about 8% of runs, and at least one in about 38%. The other cause would be a strand with no full-length read. That is unlikely here: about 7256 reads over 16 strands, with about 4.4% whole (Hypothesis 5), gives about 20 full-length reads per strand. This is a hint until the strands are sent alone.
+  - **The information term punishes loss hard.** Losing 11.7% of the text cut the score by 52% (3.023 → 1.4455), because 1 − H(e) falls quickly as e grows from 0. So guarding against a lost strand is worth some density on long passages.
+  - **Short passages lose density to padding.** A 300-base strand is the smallest unit, so a 69-character passage fills only 62% of its one strand.
+  - ⚠️ **Not from the lecture notes:** the score formula is the project's own definition, and the four new passages were written for this test.
+- **Side observation:** `LocalChannel` decoded part of the two long passages. 0.1563 of `long 1` is exactly one strand of 116 characters (strand 2 or 3). For `long 2`, 0.1246 matches about two strands. With 2968 and 7256 reads, a few 300-base copies survived whole even at `LocalChannel`'s 0.03 break rate per junction.
+- **Still open:** whether strands 8, 10 and 13 of `long 2` are deleted (deterministic, so lost on every run) or were lost by chance in this run.
+- **Next (to do):**
+  - Send `long 2`'s 16 strands alone, two requests of 1000 reads each, to confirm deletions by Appendix B's rule.
+  - Add redundancy against deleted strands, for example a parity strand *(Notes §3.3.3 Parity Checks, p. 59)*.
+
+### 2026-11-23 · Part 3, Step 1: long 2 solo test, strands 10 and 13 are deleted
+- **Setup:** the 16 strands `solution.py` v6 makes for the test passage `long 2` (300 bases each, no CC or GG), each sent **alone** in two direct requests of 1000 reads. The cell `long2-solo` (first line `# long 2 solo test`) saves every read to `long2_solo_test.json`. **Channel: live server.** The strands were already in the bank of tested strands from [Step 39](index.html#step-39).
+- **Result:** strands **10 and 13 returned 0 reads to both requests.** The other 14 returned 1000 of 1000 reads in all 28 requests. 1317 of the 28,000 solo reads (4.7%) were full length, 35–60 per request.
+
+  ```dna
+  strand 10: AAAAATGATTTTGAACTTTCAGAAATGCGCTGATACGAAGAAACTGTCGCTTAAAAATGACGACGTTGTTAACAGCATCTCATTAATCTAAGTTCGCTCGTCGTTATTTATCGTATGCAGTCGTCTACAATTGAACATAGAGCGCTGATACGCAATAATTCAGAGAAACTTGTGAATATTTGCAACTAAATGTTTCGAACGCTTAGTCAACGAAGAAAGAGTCTCATTGTTCATAGTCGTTATCTTAAGTGTCTACGTCTTTTGCGCTCACAATGAAAAACACATTACAGACGTACTATG
+  ```
+
+  ```dna
+  strand 13: AAAACACGATAACTAAAGAAGTCGTCAAAAACTAATATGAGCTAACTTTCACGCTGAATTCTCGCGAAAACAGCGATGATTAATGATGACATTCTATCATATCATTCGCTAAAGTGATGCGTGCTGCGAATTAATCATTGAGAGTTCAAATCAAAGAAAATTGCAATAACTAGCTTCGAAAGACACTCTCAGAGAGCACGCACTGTTCAACTGTGTCACATGTAAGCACTTTTTATTCGTATATTGCTCATCGTCGTTTCGATGTCGAAGAAGCTGATCTCGAGTGCGCAGAGAATGCAA
+  ```
+
+- **Conclusion:**
+  - Both are confirmed deleted by Appendix B's rule and added as rows 122–123; their bank entries are now `True` (123 deleted in all).
+  - This is one of the two pairs the offline check in Step 39 allowed (10 and 13, not 8 and 13), so `long 2`'s 0.8826 is fully explained by deletion. Every strand that came back was decoded exactly.
+  - Deletion is deterministic (Hypothesis 1), so v6 loses these 213 characters (118 + 95) of `long 2` on **every** run, and its live score for this passage stays at 1.4455. Rerunning won't help; only redundancy across strands will.
+  - Supports Hypotheses 1 and 4: strands with no CC or GG, made by the encoder, are deleted at a rate consistent with the base rate (2 of 16).
+  - The full-length share alone, 4.7% of 28,000 reads, matches the 4.7% seen in the v5 diagnosis together-run ([Step 36](index.html#step-36)) and the one-piece-per-copy prediction of Hypothesis 5.
+- **Next (to do):** add redundancy that rebuilds a lost strand, for example a parity strand *(Notes §3.3.3 Parity Checks, p. 59)*. `long 2` is now a known test case: a design that recovers it fully on the live channel can rebuild deleted strands.
