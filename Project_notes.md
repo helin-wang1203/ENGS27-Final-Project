@@ -731,7 +731,8 @@ Built from the notebook's seeds and saved outputs, and checked against Appendix 
 | The XOR parity strand `solution.py` v9 adds for `long 2` ("v9 scores exactly as predicted live, mean 2.2534, with long 2 losing its two deleted strands again"), added 2026-11-23. Only sent mixed with `long 2`'s data strands | 1 | 300 | 0 |
 | The 31 strands `solution.py` v10 makes for the five `evaluate` passages: 28-base blocks, no CC or GG, scrambled; 26 of 300 bases and a short last data strand per passage (187, 153, 232, 118 and 196 bases) ("v10 is exact on three passages, but SAMPLE loses its short last strand and long 2 loses two strands"), added 2026-11-23. `SAMPLE`'s 4 and `long 2`'s 17 were then sent alone ("v10 solo test, SAMPLE's short strand and long 2's strands 5 and 12 are deleted"): `SAMPLE`'s strand 3 and `long 2`'s strands 5 and 12 returned 0 reads twice, the other 18 returned 1000 of 1000 twice. The other 10 (`short 1`, `short 2`, `long 1`) have only been in mixed runs, but every passage they carry came back whole | 31 | 118–300 | 3 |
 | One-base variants of `long 2`'s deleted v10 strand 5, one per position, `random.Random(47)` ("Single-base scan of a deleted encoder strand, 295 of 300 one-base changes bring it back"), added 2026-11-24. All sent alone: 295 returned 100 of 100 reads, 5 returned 0 three times | 300 | 300 | 5 |
-| **Total** | **4461** | 22–1000 | **131** |
+| The 24 strands `solution.py` v11 makes for the five `evaluate` passages: order-2 context coding, 28-base blocks, no CC or GG, scrambled; full strands of 300 bases and short last strands of 142, 53, 196, 157 and 26 bases ("v11 decodes all five passages exactly on the live channel, mean score 4.1198"), added 2026-11-24. Only sent mixed with their passage's other strands; every passage came back whole | 24 | 26–300 | 0 |
+| **Total** | **4485** | 22–1000 | **131** |
 
 - The 30 strands in "Survivor repeat test, 30 surviving strands return reads in 450 of 450 requests" are starter strands, so they are already counted once.
 - **Pending (resolved 2026-11-14):** the length test's 14 strands that returned 0 reads were held out until confirmed. The retest gave 0 reads again for all 14, so they are now in the bank as `True` and in Appendix B as rows 18–31.
@@ -935,7 +936,7 @@ This section shows how the current `solution.py` turns an example English string
 - **Where it comes from:** the notebook cell `solution-walkthrough`, just after the `%%writefile solution.py` cell. The walkthrough below is that cell's saved output.
 - **Keeping it current:** after every change to the `solution.py` cell, re-run the `solution.py` cell, then the walkthrough cell, and save the notebook.
 - **Channel:** `ModelChannel`, an offline model of the live channel defined in the cell: breaks by Hypothesis 5 (0.42 after CC or GG, 0.0104 elsewhere), one piece per broken copy, nothing under 8 bases, and 0.5% substitutions per base (Step 36). It sends nothing to the live server and adds nothing to the bank of tested strands (Appendix C). `LocalChannel` isn't used because it almost never returns a whole 300-base strand.
-- **When the design changes:** the step-by-step trace follows the v10 design (updated 2026-11-23; it traced v9, v8, v7, v6 and, before that, the baseline). Its example is the `long 2` passage, and its `DELETED` setting removes whole strands before the channel. The saved output deletes strand 5 and rebuilds it from the parity strand. v10's strands are all new sequences, so which of them the live channel deletes isn't known yet. If `solution.py` stops matching it, the cell says so and shows only the strands and the decoded text. The trace will then need updating for the new design.
+- **When the design changes:** the step-by-step trace follows the v11 design (updated 2026-11-24; it traced v10, v9, v8, v7, v6 and, before that, the baseline). Its example is the `long 2` passage, and its `DELETED` setting removes whole strands before the channel. The saved output deletes strand 5 and rebuilds it from the parity strand. v11's strands are all new sequences, so which of them the live channel deletes isn't known yet. If `solution.py` stops matching it, the cell says so and shows only the strands and the decoded text. The trace will then need updating for the new design.
 - **Saved versions:** snapshots of `solution.py` kept as files while it keeps changing; see "Solution snapshots" below.
 
 ### Walkthrough
@@ -944,9 +945,9 @@ This section shows how the current `solution.py` turns an example English string
 
 ### What each step rests on
 
-| Step (v10) | Source |
+| Step (v11) | Source |
 |---|---|
-| Characters → Huffman codewords | *Notes §3.2.5 Huffman Coding, p. 54*; frequencies counted from public-domain books (⚠️ **Not from the lecture notes:** the corpus and counting) |
+| Characters → Huffman codewords chosen by the previous two characters (one code per pair; escape to one character, then to the single table) | Markov chain on pairs: *Notes §6.2.1, Definition 6.2.1, p. 101; enlarging the state, p. 102*; conditional entropy: *§3.1.4, p. 47*; Huffman: *§3.2.5, p. 54*; why context beats one table: *Remark 3.2.7, p. 56*. ⚠️ **Not from the lecture notes:** the escape scheme (PPM family) and the counts from public-domain books ([Step 49](index.html#step-49)) |
 | Escape for characters not in the table (`ESC` + UTF-8 bytes) | ⚠️ **Not from the lecture notes.** General coding practice; UTF-8 is general computing |
 | Strand index and data-bit count in every strand | ⚠️ **Not from the lecture notes.** Our design, after the baseline's index |
 | Last strand cut to the fewest bases that hold its bits; the decoder accepts it by its index and by its count matching its length | ⚠️ **Not from the lecture notes.** Our design ([Step 44](index.html#step-44)) |
@@ -972,6 +973,7 @@ Copies of `solution.py` saved as files at milestones, oldest first. Each lists w
 | `example_solution.py` | v0 (baseline) | `ebb3657` | 0.8658 | not run |
 | `solution1.py` | v6 | `db65be7` | 2.9733 | 2.2704 |
 | `solution2.py` | v9 | `9d29dfa` | 2.9733 | 2.2534 |
+| `solution3.py` | v10 | `fe5a0c2` | 0.8238 | 2.2359 |
 
 #### `example_solution.py`: v0, the baseline as given
 - **What it does:** text → UTF-8 bytes with a 4-byte length header, zero-padded to 4-byte payloads. Each payload gets a 6-base index and is written 2 bits per base, so strands are 22 bases. The decoder keeps full-length reads and votes per index.
@@ -996,6 +998,14 @@ Copies of `solution.py` saved as files at milestones, oldest first. Each lists w
 - **Why:** deletion is deterministic, so a deleted strand loses its text on every run ([Step 40](index.html#step-40)). v7 (one parity strand always) and v8 (a 95% rule) were tried first: v8 rebuilt `long 2` live (2.3035), but its mean fell to 2.1013 because parity costs density on every run ([Step 42](index.html#step-42)).
 - **Score:** `SAMPLE` **2.9733 → 2.9733** (unchanged: same strands as v6). Five-passage mean **2.2704 → 2.2534**, exactly as predicted ([Step 43](index.html#step-43)): `long 2`'s one parity strand costs density but can't rebuild its two deleted strands. The gain is in expectation over passages whose deletions aren't known in advance: expected five-passage mean 2.3474 → 2.3721.
 
+#### `solution3.py`: v10, no padding and bigger blocks
+- **What changed since v9 (v10):**
+  - **The last data strand is cut to the fewest bases that hold its bits,** so short passages no longer pay for padding. The decoder finds the short strand among shorter reads by its index and by its count matching its length.
+  - **28-base blocks instead of 14:** 546 bits per strand instead of 535, closer to the limit of 1.8325 bits per base *(Notes §6.1.4 Counting Writable Strings, p. 99)*.
+  - ⚠️ **Not from the lecture notes:** cutting the last strand and checking its length against its count are our own design.
+- **Why:** padding cost short passages up to 38% of their density, and bigger blocks add about 2% everywhere ([Step 44](index.html#step-44)).
+- **Score:** density rose on every passage (for example `short 1` 1.840 → 2.952, `SAMPLE` 2.973 → 3.152). Live, three passages were exact at their best scores yet (`short 1` 2.9519, `short 2` 3.0022, `long 1` 3.0949). But all strands are new sequences, and three of them are deleted: `SAMPLE`'s short last strand and `long 2`'s strands 5 and 12 ([Steps 45–46](index.html#step-45)). So `SAMPLE` fell **2.9733 → 0.8238** and the five-passage mean **2.2534 → 2.2359**. The expected five-passage mean, over passages whose deletions aren't known, rose 2.3721 → 2.8145.
+
 ### History of changes to `solution.py`
 
 One row per change to the `solution.py` cell, oldest first.
@@ -1017,6 +1027,7 @@ One row per change to the `solution.py` cell, oldest first.
 | v8 | 2026-11-23 | **Parity strands from a Hamming code across the strands, as many as a 95% rule calls for.** Replaces v7's single parity strand. `encode` picks the least protection t whose chance of keeping the text whole, P(≤ t deleted) with deletions ~ Binomial(strands, 74/2584), is at least 0.95 (`_layout`): t = 0 no parity; t = 1 one XOR strand (as v7); t = 2 Hamming checks 1..r over the data strands at Hamming positions 3, 5, 6, 7, 9, … (shortened code, distance 3); t = 3 the same plus an overall parity (extended code, distance 4). If none reaches 0.95, t = 3. Each parity strand's index is 4095 − (16(d − 1) + j), so it tells the decoder the check j and the number of data strands d; data strands are capped at 240 (about 27,000 characters, against 4095 in v7). `_rebuild` writes each check as an XOR equation with the missing strands as unknowns and solves by elimination over XOR. The data strands are identical to v6/v7's | v7's one parity strand can't save `long 2`, which loses 2 strands on every run ([Step 40](index.html#step-40)); [Step 41](index.html#step-41) and the deletion-distribution cell show one parity strand keeps the 95% level only up to about 1000 characters. The user chose a Hamming code across strands *(Notes §3.3.4, p. 59)* over XOR groups and an any-k erasure code (parked below). Offline checks: all five `evaluate` passages round-trip exactly; t = 0, 1, 1, 1 and 2 for `short 1`, `short 2`, `SAMPLE`, `long 1` and `long 2`. Exact with any 1 strand deleted for every protected passage; `long 2` (16 data + 5 parity) exact with all 210 pairs deleted, and in 391 of 400 sampled triples; **`long 2` without strands 10 and 13 decodes exactly**, also through `ModelChannel`. Through `ModelChannel` with 1 or 2 random strands deleted: accuracy 1.0 in 15 of 15 runs. Density: `short 1` 1.840 (no parity, as v6), `short 2` 1.511, `SAMPLE` 2.379, `long 1` 2.473 (as v7), `long 2` 2.303 (v7 2.845). By length: t = 1 up to about 1000 characters, t = 2 at 2000, t = 3 from about 3000; P(text whole) 0.9419 at 5000 and 0.704 at 10,000, below target | **0.0000** (`SAMPLE`: density 2.379, accuracy 0.0000, as v7) | **2.3787** (`SAMPLE`: density 2.379, accuracy 1.0000). All five passages exact; `long 2` 2.3035 with its two deleted strands rebuilt; mean of five 2.1013, against v6's 2.2704 ([Step 42](index.html#step-42)) | `9d29dfa` |
 | v9 | 2026-11-23 | **Parity picked by expected score, not a 95% target.** Only `_layout` changed (plus new `_info` and `_expected_info`; `TARGET` removed). For each option t = 0–3 (none, one XOR strand, Hamming, extended Hamming, as in v8) it computes the expected score up to a constant, E[1 − H(e)] / strands, and takes the highest (ties to the smaller t). The number deleted is Binomial(strands, 74/2584) *(Notes §2.4.1, Proposition 2.4.3, p. 33)*; with at most t deleted nothing is lost; with more, it assumes nothing is rebuilt, counts the data strands among the deleted ones (hypergeometric), and sets e = data strands lost / d. 1 − H(e) is the notebook's `evaluate` rule, 0 once e ≥ 0.5 *(Notes §3.1.3, p. 46)*. Encoding, the parity index scheme and decoding are unchanged | [Step 42](index.html#step-42): v8's 95% rule lowered the mean live score from 2.2704 to 2.1013, and an offline check gave v8 a lower expected score than v6 on every passage but `short 1`. **Choices:** t = 0 for 1–8 data strands (up to about 900 characters), t = 1 for 9–55, t = 3 for 56–57 and 66–120, t = 1 for 58–65 and 121–123, t = 0 for 124–240; t = 2 is never chosen, since t = 3 costs only one more strand. The jumps past 55 come from the model ignoring partial rebuilds when more than t strands are lost, which undervalues parity for long texts. **Passages:** `short 1`, `short 2`, `SAMPLE` and `long 1` get no parity (their strands are exactly v6's); `long 2` gets one XOR strand (17 strands, density 2.845). Offline checks: all five round-trip exactly; `long 2` exact with any one strand deleted; 5 other texts (empty, emoji, 13,000 characters, `SAMPLE` × 30) round-trip exactly with no CC or GG. Exact expected score (every set of up to 3 deleted strands, as in Step 42): mean 2.3721 (v6 2.3474, v8 2.0771); `long 2` 2.7153. **Expected on the live channel:** the first four passages send v6's strands, so they should repeat v6's scores; `long 2` should lose strands 10 and 13 again, which one parity strand can't rebuild (accuracy 0.8826, score about 1.36), so the five-passage mean should be about 2.25 | not run | **2.9733** (`SAMPLE`: density 2.973, accuracy 1.0000). Five passages exactly as predicted: `long 2` 1.3604 (accuracy 0.8826); mean of five 2.2534 ([Step 43](index.html#step-43)) | `9d29dfa` |
 | v10 | 2026-11-23 | **Last strand cut to fit, and 28-base blocks.** (1) `BLOCK` 14 → 28: a full strand is 10 blocks of 28 and one of 20, 546 bits instead of 535 (1.820 bits per base, against 1.783; the limit is 1.8325), so `DATA_BITS` 513 → 524. New `_sizes(length)` and `_strand_bits(length)`; `bits_to_bases` takes a length, and `bases_to_bits` uses the read's length. (2) The last data strand is cut to `LAST_LEN[n]`, the fewest bases that hold its n data bits plus index and count; its zero padding is dropped. Parity strands stay 300 bases and see the short strand zero-padded to full width. (3) `decode` groups reads by length. Full-length reads are decoded as before. Among shorter reads, a group is taken as the last strand only if its count needs exactly its length (`LAST_LEN[n]` = its length) and its index is the one the last strand must have: d − 1 when a parity strand gives d, otherwise one past the highest full-length data index. The biggest such group wins. `_layout` is unchanged (it still counts strands, not bases) | [Step 44](index.html#step-44): padding of the last strand cost short passages up to 38% of their density (`short 1` filled 62% of its one strand), and 28-base blocks give about 2% more on every passage. Offline checks: round trips exact on 11 texts (empty, `"a"`, emoji, 13,000 characters, `SAMPLE` × 30, the five passages), no CC or GG anywhere; random junk reads decode to nothing; `long 2` exact with any one strand deleted (17 of 17); through `ModelChannel` all five passages exact in 25 of 25 runs. With the short last strand deleted, no fragment was taken for it in 160 of 160 runs. A first version without the exact-index rule took a fragment for it in 3 of 32 runs. Density: `short 1` 1.840 → **2.952**, `short 2` 2.267 → **3.002**, `SAMPLE` 2.973 → **3.152**, `long 1` 2.827 → **3.095**, `long 2` 2.845 → **2.905**. Expected score, exact over up to 3 deleted strands (as in Step 42): five-passage mean 2.3721 → **2.8145**. **Every strand is a new sequence** (new blocks and new strand boundaries), so the known deletions of v6's `long 2` strands 10 and 13 no longer apply | not run | **0.8238** (`SAMPLE`: density 3.152, accuracy 0.7915; its short last strand was not recovered). Five-passage mean 2.2359: `short 1` 2.9519, `short 2` 3.0022, `long 1` 3.0949 exact; `long 2` 1.3068 (accuracy 0.8727, two data strands lost) ([Step 45](index.html#step-45)) | `fe5a0c2` |
+| v11 | 2026-11-24 | **Order-2 context coding.** Each character is coded with a Huffman code chosen by the two characters before it: the text is a Markov chain on pairs, and each pair ab has its own code built from N(abc), the counts in the 7 books. A character a pair's table hasn't seen costs that table's escape (count = the number of different characters seen after the pair), then the order-1 table (previous character), then v10's single table and its UTF-8 escape. The context restarts empty in every strand, so its first character uses the single table and its second the order-1 table. New cell `context-counts` builds the counts (2,800 pairs, 22,614 counts; 112 single characters, 2,800 counts), saved to `english_context_counts.json` and pasted into the solution cell as `CONTEXT_COUNTS`, a zlib-compressed, base64 string of 83,548 characters (`solution.py` is 108 KB and loads in 0.13 s). New `_code`, `_pack` (packs strands) and `_unpack` (decodes one strand); `encode` and `decode` use them. **Decoder fix:** the short last strand must also come back in at least a quarter of the median copies of a full-length data strand. Without this, a piece of a longer strand was taken for a deleted short strand in 2 of 160 test runs, because our A-rich strands make pieces with small indices common | [Step 49](index.html#step-49): coding by the previous two characters cuts bits per character by 25–30% on held-out text. Order 2 rather than 3: order 3's tables are 4 times bigger and lose 0.17 bits per character on held-out text. Offline checks: round trips exact on 17 texts, including unseen characters and contexts (`Zq9×ẞ 中文 🙂🙂`, curly quotes, all printable ASCII, 13,000 characters), with no CC or GG; junk reads decode to nothing; `long 2` exact with any one strand deleted (13 of 13); through `ModelChannel` all five passages exact in 150 of 150 runs; with the short last strand deleted, no piece was taken for it in 560 of 560 runs. Bits per character on `long 2`: 4.50 → 3.18. Density: `short 1` 2.952 → **3.887**, `short 2` 3.002 → **3.853**, `SAMPLE` 3.152 → **4.482** (3 strands), `long 1` 3.095 → **4.374** (5), `long 2` 2.905 → **4.002** (12 data + 1 parity). Expected score, exact over up to 3 deleted strands (as in Step 42): five-passage mean 2.8145 → **3.8789**. Every strand is a new sequence | not run | **4.4824** (`SAMPLE`: density 4.482, accuracy 1.0000). All five passages exact; mean of five **4.1198**, against v10's 2.2359 ([Step 50](index.html#step-50)) | not committed |
 
 *v0 scores are the `evaluate` cell's saved output as of 2026-11-23. The date of that run wasn't recorded.*
 
@@ -2122,7 +2133,7 @@ Improvements considered but not used yet. When one goes into `solution.py`, move
   - **No feature tested predicts deletion.** None reaches P < 0.05; with 8 features, about 0.4 would by chance alone. This fits Hypothesis 4 (deletion is a pseudo-random function of the whole sequence).
   - **The features that make our strands unusual don't raise the rate elsewhere.** 86% of our strands have GC below 0.40, but other low-GC strands are deleted at 3.2% (4 of 124). All have no CC or GG, but other such strands are deleted at 2.3% (5 of 219). The A-run start can't be tested here: only 29 other strands start with 4 or more A's (0 deleted), and 117 with 3 or more (1 deleted). The baseline's strands also start with small indices (64 of 113 begin `AAA`) and are deleted at 1.8%.
   - **So the bank doesn't explain our 5 of 65, and doesn't rule out chance.** P = 0.039 is one of several looks at the data. Its 95% interval, 2.5%–17%, includes the random rate.
-  - ⚠️ **Not from the lecture notes:** the Clopper–Pearson interval, Fisher's exact test and the choice of features. The notes cover the binomial *(§2.4.1, p. 33)* and touch on p-values only in an example *(Example 7.1.3, §7.1.1, p. 123)*.
+  - ⚠️ **Not from the lecture notes:** the Clopper–Pearson interval, Fisher's exact test and the choice of features. The notes cover the binomial *(§2.4.1, p. 33)* and touch on p-values only in an example *(Example 7.1.3, §7.1.1, p. 124)*.
 - **Still open:** whether the A-run start, or something about ranking and scrambling no simple feature captures, raises the rate; or whether 5 of 65 is chance.
 - **Next (to do):**
   - The single-base scan of a deleted encoder strand (`long 2`'s v10 strand 5): if almost any one change brings it back, deletion is hash-like for our strands too.
@@ -2144,3 +2155,78 @@ Improvements considered but not used yet. When one goes into `solution.py`, move
   - ⚠️ **Not from the lecture notes:** the scan design and the "new random draw" reading are ours (after Step 8).
 - **Still open:** a hash computed from something the scan can't change, such as the length or the A-run start, could still shift the rate for a whole class of strands. The grouped test would settle that, but this result makes it a low priority.
 - **Next (to do):** nothing more on deletion for now. A design that adds parity at the true rate is already in v10.
+
+### 2026-11-24 · Part 3, Step 1: Context compression, coding each character by the two or three before it cuts bits per character by 30–40%
+- **Setup:** an offline measurement in the cell `context-compression` (first line `# Context compression measurement`). Nothing is sent.
+  - Character-count tables of order 0 (one table, as v10), order 1 (one per previous character), order 2 (previous two) and order 3 (previous three) are built from 6 of the 7 books cached in `corpus/`, 4,786,603 characters.
+  - They are tested on text they weren't built from: the first 200,000 characters of the held-out book ("The Problems of Philosophy") and the five `evaluate` passages.
+  - **The model:** each context has its counts plus an escape whose count is the number of distinct characters seen after it. An unseen character costs the escape plus the next lower order. Order 0's escape is followed by UTF-8 bytes, as in v10. A context the books never show goes straight to the lower order.
+  - **Ideal bits** = −log₂ of the model's probability. **Huffman bits** = the actual codeword lengths, with one Huffman table per context built by `solution._huffman`.
+  - **Strands:** packed as in v10 (524 data bits, whole characters, last strand cut to fit), with the context reset to "after spaces" at every strand start so each strand decodes on its own. Density uses v10's layout and parity choice.
+- **Result, entropy of the training books** *(Notes §3.1.3, p. 46; conditional entropy, §3.1.4, p. 47)*:
+
+  | order | H (bits/char) | contexts | counts to store |
+  |---|---|---|---|
+  | 0 | 4.446 | 1 | 110 |
+  | 1 | 3.556 | 110 | 2,771 |
+  | 2 | 2.857 | 2,771 | 22,177 |
+  | 3 | 2.256 | 22,177 | 94,951 |
+
+- **Result, bits per character on held-out text** (ideal / actual Huffman):
+
+  | text | characters | order 0 | order 1 | order 2 | order 3 |
+  |---|---|---|---|---|---|
+  | held-out book | 200,000 | 4.398 / 4.428 | 3.556 / 3.596 | 2.926 / 2.986 | 2.427 / 2.554 |
+  | `short 1` | 69 | 4.550 / 4.580 | 3.671 / 3.725 | 3.268 / 3.362 | 3.160 / 3.203 |
+  | `short 2` | 170 | 4.528 / 4.547 | 3.738 / 3.765 | 3.495 / 3.576 | 3.146 / 3.247 |
+  | `SAMPLE` | 446 | 4.392 / 4.406 | 3.602 / 3.626 | 3.002 / 3.074 | 2.657 / 2.711 |
+  | `long 1` | 742 | 4.447 / 4.468 | 3.627 / 3.644 | 3.150 / 3.179 | 2.817 / 2.889 |
+  | `long 2` | 1,814 | 4.463 / 4.495 | 3.658 / 3.707 | 3.133 / 3.201 | 2.723 / 2.818 |
+
+- **Result, projected density** (v10's strands, last strand cut, parity by `_layout`; strands in brackets):
+
+  | passage | order 0 | order 1 | order 2 | order 3 |
+  |---|---|---|---|---|
+  | `short 1` | 2.968 (1) | 3.584 (1) | 3.943 (1) | 4.119 (1) |
+  | `short 2` | 3.022 (2) | 3.570 (2) | 3.778 (2) | 4.121 (2) |
+  | `SAMPLE` | 3.152 (4) | 3.800 (4) | 4.516 (3) | 5.075 (3) |
+  | `long 1` | 3.101 (7) | 3.798 (6) | 4.355 (5) | 4.764 (5) |
+  | `long 2` | 2.907 (16) | 3.482 (13) | 3.978 (12) | 4.487 (10) |
+
+- **Conclusion:**
+  - **Context is the biggest density lever found so far.** Using the previous characters lowers the bits per character, as the notes predict for a source with memory *(Notes Remark 3.2.7, §3.2.6, p. 56)*. On the five passages: order 1 saves about 18%, order 2 about 25–30%, order 3 about 30–40%. Projected density rises from 2.9–3.2 to 3.8–4.5 at order 2 and 4.1–5.1 at order 3, if no strand is lost.
+  - **The gain holds on unseen text.** The held-out book gets almost the training entropy at orders 1 and 2 (3.556 and 2.926 against 3.556 and 2.857). At order 3 it costs 0.17 bits more than the training entropy, a first sign of too many contexts with too few examples.
+  - **Short passages gain less.** Every strand start resets the context and so pays order-0 prices, and the escapes add up. `short 1` saves 30% at order 3 against 40% for `SAMPLE`.
+  - **Huffman's rounding costs little:** 0.01–0.13 bits per character above the ideal, more at higher orders. Arithmetic coding wouldn't change the picture.
+  - **Fewer strands also means fewer deletion risks.** `long 2` goes from 16 data strands to 10 at order 3.
+  - ⚠️ **Not from the lecture notes:** the escape model (in the spirit of the PPM family of compressors), the held-out test and the reset at strand starts are our own choices; the books are general public-domain text.
+- **Still open:**
+  - How big `solution.py` can be. Order 3 needs about 95,000 counts in the file; the project spec sets no limit.
+  - How well this does on text unlike the books (technical text, names, numbers). Grading passages are unknown.
+  - Smaller order-3 tables, for example keeping only contexts seen often enough.
+- **Next (to do):** choose an order and build v11 with context-based Huffman tables.
+
+### 2026-11-24 · Part 3, Step 1: v11 decodes all five passages exactly on the live channel, mean score 4.1198
+- **Setup:** `solution.py` v11 (order-2 context coding), run by the `evaluate` cell on the five passages in `SAMPLES`, each on `LocalChannel(seed=1)` and once on the live server, with 4 reads per character. **Channel: live server** (`Channel()`) and `LocalChannel(seed=1)`. All 24 strands are new sequences and were added to the bank as `False`.
+- **Result:** every passage came back exactly.
+
+  | passage | strands (last strand's length) | density v11 | live accuracy | live score v11 | v10 ([Step 45](index.html#step-45)) | best before v11 |
+  |---|---|---|---|---|---|---|
+  | `short 1` | 1 (142) | 3.887 | 1.0000 | **3.8873** | 2.9519 | 2.9519 (v10) |
+  | `short 2` | 2 (53) | 3.853 | 1.0000 | **3.8527** | 3.0022 | 3.0022 (v10) |
+  | `SAMPLE` | 3 (196) | 4.482 | 1.0000 | **4.4824** | 0.8238 | 2.9733 (v6, v9) |
+  | `long 1` | 5 (157) | 4.374 | 1.0000 | **4.3744** | 3.0949 | 3.0949 (v10) |
+  | `long 2` | 12 + 1 parity (26) | 4.002 | 1.0000 | **4.0022** | 1.3068 | 2.3035 (v8) |
+  | mean | | | | **4.1198** | 2.2359 | |
+
+  On `LocalChannel`, `short 1` decoded exactly (3.8873); every other `LocalChannel` score is 0.0000.
+
+- **Conclusion:**
+  - **Context coding delivered its projected density on the live channel.** Each passage scored its offline density exactly: 3.85–4.48, against 2.95–3.15 for v10. That's 30–42% more per passage, close to Step 49's projection (order 2: 3.78–4.52).
+  - **Every passage is the best live score so far,** and the mean rose 2.2359 → 4.1198 (+84%). Part of the jump over v10 is luck: none of v11's strands for these passages was lost (or one was, and parity rebuilt it in `long 2`; this run can't tell), while v10 lost three.
+  - **The short last strands worked live,** down to 26 bases (`long 2`) and 53 bases (`short 2`).
+  - The expected five-passage mean over passages whose deletions aren't known is 3.8789 (history table, v11 row). This run is above it because no unrecoverable deletion happened.
+  - ⚠️ **Not from the lecture notes:** the score formula is the project's own definition.
+- **Still open:** whether any of the 24 strands is deleted. A deleted `long 2` strand would have been rebuilt from its parity strand. Only a solo test would show it.
+- **Next (to do):** the remaining ideas from the list: drop the count field (+1–2%), fill a deleted strand's gap with a guess, and check robustness on text unlike the books.
+
