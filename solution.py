@@ -4,7 +4,7 @@ import math
 import random
 
 STRAND = 300        # bases per strand
-BLOCK = 14          # bases per ranked block; a strand is 21 blocks of 14 plus one of 6
+BLOCK = 28          # bases per ranked block; a strand is 10 blocks of 28 plus one of 20
 INDEX_BITS = 12     # strand number: data strands 0 .. MAX_DATA - 1; parity strands use the top of the range
 LENGTH_BITS = 10    # how many data bits this strand holds (the rest is padding)
 NEXT = {"A": "ACGT", "C": "AGT", "G": "ACT", "T": "ACGT"}   # allowed next base: never CC or GG
@@ -104,10 +104,22 @@ def _block_bits(n):
     """Bits an n-base block can always hold, whatever base comes before it."""
     return min(WAYS[n].values()).bit_length() - 1
 
-BLOCK_SIZES = [BLOCK] * (STRAND // BLOCK) + ([STRAND % BLOCK] if STRAND % BLOCK else [])
-STRAND_BITS = sum(_block_bits(n) for n in BLOCK_SIZES)
+def _sizes(length):
+    """Block sizes of a strand of `length` bases: whole blocks of BLOCK, then the rest."""
+    return [BLOCK] * (length // BLOCK) + ([length % BLOCK] if length % BLOCK else [])
+
+def _strand_bits(length):
+    return sum(_block_bits(n) for n in _sizes(length))
+
+BLOCK_SIZES = _sizes(STRAND)
+STRAND_BITS = _strand_bits(STRAND)
 DATA_BITS = STRAND_BITS - INDEX_BITS - LENGTH_BITS
 assert DATA_BITS < 2 ** LENGTH_BITS
+# The last data strand is cut to the fewest bases that hold its bits, so a short text doesn't pay
+# for padding. LAST_LEN[n] = length of a last strand holding n data bits. Its count field then
+# also tells the decoder its length, which is how a whole short strand is told from a fragment.
+LAST_LEN = [next(L for L in range(1, STRAND + 1) if _strand_bits(L) >= INDEX_BITS + LENGTH_BITS + n)
+            for n in range(DATA_BITS + 1)]
 
 def _unrank(v, prev, n):
     """Number v -> the v-th allowed n-base string after base prev (A < C < G < T order)."""
@@ -134,11 +146,11 @@ def _rank(seq, prev):
         prev = c
     return v
 
-def bits_to_bases(bits):
-    """STRAND_BITS bits -> one STRAND-base strand with no CC or GG. Each block is ranked after
-    the last base of the block before it, so the joins are safe too."""
+def bits_to_bases(bits, length=STRAND):
+    """_strand_bits(length) bits -> one strand of `length` bases with no CC or GG. Each block is
+    ranked after the last base of the block before it, so the joins are safe too."""
     out, prev, i = [], START, 0
-    for n in BLOCK_SIZES:
+    for n in _sizes(length):
         k = _block_bits(n)
         block = _unrank(int(bits[i:i + k], 2), prev, n)
         out.append(block)
@@ -146,12 +158,10 @@ def bits_to_bases(bits):
     return "".join(out)
 
 def bases_to_bits(seq):
-    """Undo bits_to_bases. Raises ValueError if seq can't be a strand (wrong length, CC or GG,
-    or a block number too big for its bits)."""
-    if len(seq) != STRAND:
-        raise ValueError("wrong length")
+    """Undo bits_to_bases (the length is len(seq)). Raises ValueError if seq can't be a strand
+    (CC or GG, or a block number too big for its bits)."""
     out, prev, i = [], START, 0
-    for n in BLOCK_SIZES:
+    for n in _sizes(len(seq)):
         k = _block_bits(n)
         v = _rank(seq[i:i + n], prev)
         if v >= 2 ** k:
@@ -181,7 +191,7 @@ def _scramble(bits, i):
 # Notes §3.3.3 Parity Checks, p. 59). Check 0 is an overall parity over everything (the extended
 # code of Remark 3.3.5, p. 61). The decoder knows which strands are missing (their indices never
 # show up), so it only has to fill in known gaps: a code of distance t + 1 can always fill t.
-# How much protection, t, is picked by the 95% rule below:
+# How much protection, t, is picked by expected score (_layout below):
 #   t = 0: no parity             t = 2: Hamming checks 1..r (distance 3)
 #   t = 1: one XOR strand        t = 3: checks 1..r plus overall parity 0 (distance 4)
 P_DELETE = 74 / 2584   # share of random strands the live channel deletes (Hypotheses 1 and 4)
@@ -265,8 +275,10 @@ def encode(text):
     strands, value = [], {}
     for i, data in enumerate(chunks):
         rest = (format(len(data), f"0{LENGTH_BITS}b") + data).ljust(REST_BITS, "0")
-        value[("d", i)] = int(rest, 2)
-        strands.append(bits_to_bases(format(i, f"0{INDEX_BITS}b") + _scramble(rest, i)))
+        value[("d", i)] = int(rest, 2)                    # parity sees every strand at full width
+        length = LAST_LEN[len(data)] if i == d - 1 else STRAND
+        rest = rest[:_strand_bits(length) - INDEX_BITS]   # the last strand drops its zero padding
+        strands.append(bits_to_bases(format(i, f"0{INDEX_BITS}b") + _scramble(rest, i), length))
     t, checks = _layout(d)
     for j in sorted(checks, key=lambda j: j == 0):        # Hamming checks first, overall parity last
         v = 0
@@ -358,9 +370,11 @@ def _consensus(group):
     return "".join(collections.Counter(col).most_common(1)[0][0] for col in zip(*group))
 
 def decode(reads):
-    full = [r for r in reads if len(r) == STRAND]          # only whole strands are used
+    by_len = collections.defaultdict(list)
+    for r in reads:
+        by_len[len(r)].append(r)
     best = {}                                             # strand index -> (copies, bits)
-    for g in _groups(full, STRAND // 10):
+    for g in _groups(by_len.pop(STRAND, []), STRAND // 10):   # whole full-length strands
         try:
             bits = bases_to_bits(_consensus(g))
         except ValueError:                                # consensus isn't a valid strand
@@ -368,6 +382,30 @@ def decode(reads):
         i = int(bits[:INDEX_BITS], 2)
         if i not in best or len(g) > best[i][0]:          # two groups claim one index: keep the bigger
             best[i] = (len(g), _scramble(bits[INDEX_BITS:], i))
+    # The short last strand: among groups of shorter reads, a whole copy decodes to a count whose
+    # LAST_LEN is exactly its length, and to the index the last strand must have: d - 1 when a
+    # parity strand says there are d, otherwise one past the highest full-length data strand.
+    # Pieces of longer strands almost never pass both (about 1 in 2 million per group).
+    par = [_parity_slot(k)[0] for k in best if k >= MAX_DATA]
+    want = (collections.Counter(par).most_common(1)[0][0] - 1 if par
+            else max((k for k in best if k < MAX_DATA), default=-1) + 1)
+    last = None
+    for length, rs in by_len.items():
+        if length < LAST_LEN[0]:
+            continue
+        for g in _groups(rs, length // 10):
+            try:
+                bits = bases_to_bits(_consensus(g))
+            except ValueError:
+                continue
+            i = int(bits[:INDEX_BITS], 2)
+            rest = _scramble(bits[INDEX_BITS:], i)
+            n = int(rest[:LENGTH_BITS], 2)
+            if (n <= DATA_BITS and LAST_LEN[n] == length and i == want and i not in best
+                    and (last is None or len(g) > last[1][0])):
+                last = (i, (len(g), rest.ljust(REST_BITS, "0")))
+    if last:
+        best[last[0]] = last[1]
     _rebuild(best)                                        # deleted strands: rebuild from parity
     out = []
     for i in sorted(best):                                # a strand that never came back is skipped
