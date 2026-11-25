@@ -2230,3 +2230,34 @@ Improvements considered but not used yet. When one goes into `solution.py`, move
 - **Still open:** whether any of the 24 strands is deleted. A deleted `long 2` strand would have been rebuilt from its parity strand. Only a solo test would show it.
 - **Next (to do):** the remaining ideas from the list: drop the count field (+1–2%), fill a deleted strand's gap with a guess, and check robustness on text unlike the books.
 
+### 2026-11-24 · Part 3, Step 1: Pruned order 3, keeping only contexts seen 200+ times keeps nearly all of order 3's gain (+10% density over v11) at half the size
+- **Setup:** an offline measurement in the cell `pruned-order3` (first line `# Pruned order-3 measurement`). Nothing is sent.
+  - Tables are built from 6 books, as in [Step 49](index.html#step-49). An order-3 context (three previous characters) is kept only if the books contain it at least **T** times. Within a kept context, a next character is kept only if seen at least **M** times.
+  - Anything pruned falls back to order 2, then order 1, then the single table, through the escapes v11 uses. The context restarts empty at every strand start, as in v11.
+  - Tested on the held-out book (200,000 characters) and the five passages. Size is the number of counts `solution.py` would store, and the length of the zlib + base64 string holding them, as v11 stores its order-2 counts.
+  - Density uses v11's strand layout. The order-2 row is v11's model, trained on 6 books here (v11 itself uses all 7).
+- **Result** (bits per character are actual Huffman; mean density over the five passages):
+
+  | model | order-3 contexts | counts stored | stored string (characters) | held-out book | `SAMPLE` | `long 2` | mean density |
+  |---|---|---|---|---|---|---|---|
+  | order 2 (v11) | 0 | 24,948 | 82,340 | 2.954 | 3.076 | 3.178 | 4.112 |
+  | order 3, all (T = 1) | 22,177 | 119,897 | 398,632 | 2.519 | 2.646 | 2.793 | 4.529 |
+  | T = 5 | 12,069 | 106,418 | 332,460 | 2.516 | 2.641 | 2.793 | **4.548** |
+  | T = 20 | 7,197 | 91,280 | 280,560 | 2.516 | 2.641 | 2.807 | 4.538 |
+  | T = 50 | 5,127 | 80,261 | 248,192 | 2.520 | 2.643 | 2.798 | 4.539 |
+  | **T = 200** | **2,827** | **63,108** | **199,132** | **2.548** | **2.691** | **2.825** | **4.522** |
+  | T = 1000 | 1,015 | 43,740 | 141,756 | 2.659 | 2.800 | 2.950 | 4.397 |
+  | T = 20, M = 3 | 7,197 | 69,740 | 240,052 | 2.530 | 2.659 | 2.825 | 4.510 |
+  | T = 200, M = 5 | 2,827 | 50,028 | 172,516 | 2.569 | 2.731 | 2.854 | 4.484 |
+
+  The order-3 context counts above are the table's "contexts" minus order 1 and 2's 2,881 contexts. Full per-passage numbers are in the cell's output.
+
+- **Conclusion:**
+  - **Most order-3 contexts are rare and nearly useless.** Keeping only those seen 200+ times (2,827 of 22,177) gives up 0.03 bits per character on the held-out book and keeps mean density at 4.52, against 4.53 for all of order 3. Light pruning (T = 5) is even slightly better than none: rare contexts with only a few examples predict worse than falling back to order 2.
+  - **The gain over v11 is about +10% density** (4.11 → 4.52), from 0.3–0.4 fewer bits per character.
+  - **The cost is size:** T = 200 needs 63,108 counts, a 199,000-character string, against 82,000 for v11. Pruning within rows (M) saves some space but costs density faster than raising T does.
+  - **Short passages gain least** (`short 1` 3.89 → 4.15), because their strand starts have little context.
+  - ⚠️ **Not from the lecture notes:** pruning contexts by count is our own choice, in the spirit of PPM compressors.
+- **Still open:** how large a `solution.py` the graders accept. The spec sets no limit; T = 200 would make it about 280 KB.
+- **Next (to do):** build v12 with order 3 pruned at T = 200 (or T = 50 if size doesn't matter), trained on all 7 books.
+
