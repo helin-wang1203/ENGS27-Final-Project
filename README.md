@@ -16,6 +16,8 @@ Encode English text as DNA strands and recover it from random fragments ("reads"
 
 The site turns `Project_notes.md` and the notebook into pages you read in a browser: the Findings log as a step-by-step timeline, the other notes sections, and every notebook cell with its saved output.
 
+**Online:** https://helin-wang1203.github.io/ENGS27-Final-Project/ (rebuilt and published by `.github/workflows/pages.yml` on every push to `main`).
+
 ### Start the server
 
 From the project folder:

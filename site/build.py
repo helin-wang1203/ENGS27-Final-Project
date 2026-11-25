@@ -570,7 +570,7 @@ document.addEventListener('click', function (e) {
     var old = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = old; }, 1200);
   });
 });
-if (location.protocol.indexOf('http') === 0) {
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {  // serve.py only, not GitHub Pages
   var key = 'scroll:' + location.pathname, seen = null;
   try { var y = sessionStorage.getItem(key); if (y) { scrollTo(0, +y); sessionStorage.removeItem(key); } } catch (e) {}
   setInterval(function () {
